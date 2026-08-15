@@ -21,7 +21,7 @@
 <div align="center">
   <a href="https://hellogithub.com/repository/607b849c598d48e08fe38789d156ebdc" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=607b849c598d48e08fe38789d156ebdc&claim_uid=ObuMXUfeHBmk9TI&theme=neutral" alt="Featured｜HelloGitHub" width="160" height="32" /></a>
 </div>
-### 本项目仅在原作者项目上，深度增加了如下功能和说明：
+## 本项目仅在原作者项目上，深度增加了如下功能和说明：
 
 - 原生C++支持Bit-Perfect,WASAPI独占支持。
 - CUE专辑和普通专辑（非cue）的支持，并分组
