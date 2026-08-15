@@ -540,7 +540,9 @@ const showFullLyricScreen = () => {
 };
 
 const supportAutoScroll = computed(() => {
-  return lrcArray.value.length > 0 && lrcArray.value[0].startTime !== -1;
+  // 只要存在带时间戳的歌词行即可自动滚动（解析器会把无时间戳的纯文本行排到数组头部，
+  // 不能只看 lrcArray[0]；与 MusicHook 的对象分支守卫保持一致）
+  return lrcArray.value.some((l) => l.startTime !== -1);
 });
 
 // 关闭全屏歌词

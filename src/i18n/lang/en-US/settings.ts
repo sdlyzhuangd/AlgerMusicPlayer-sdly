@@ -92,6 +92,30 @@ export default {
     audioDeviceDesc: 'Select audio output device such as speakers, headphones or Bluetooth devices',
     testAudio: 'Test',
     selectAudioDevice: 'Select output device',
+
+    // Bit-Perfect exclusive output
+    bitPerfect: {
+      title: 'Bit-Perfect Exclusive Output',
+      desc: 'Play local music through WASAPI exclusive mode, bypassing system mixing and resampling for lossless bit-perfect output (Windows only)',
+      unsupported: 'Not supported in this environment (requires Windows with native module)',
+      enabledHint: 'Enabled: local music uses exclusive output; volume/EQ/playback rate are inactive during playback',
+      device: 'Exclusive Output Device',
+      deviceDesc: 'Select the audio device used for exclusive output',
+      defaultDevice: 'System Default Device',
+      sessionActive: 'Bit-Perfect session active',
+      idleHint: 'Auto-enabled when playing local music; no active session currently',
+      mode: {
+        exclusive: 'Exclusive',
+        shared: 'Shared Fallback'
+      },
+      fields: {
+        device: 'Device',
+        sampleRate: 'Sample Rate',
+        format: 'Bit Depth',
+        channels: 'Channels'
+      },
+      mono: 'Mono'
+    },
     showStatusBar: 'Show Status Bar',
     showStatusBarContent:
       'You can display the music control function in your mac status bar (effective after a restart)',

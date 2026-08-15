@@ -529,6 +529,15 @@ export const loadLyricThemeColor = (): string => {
 };
 
 /**
+ * 是否已自定义歌词主题色（区分“未设置”与“设置为默认色”）
+ * 供其他界面（如本地音乐专辑头部高亮色）判断是否需要跟随用户自定义色
+ */
+export const hasCustomLyricThemeColor = (): boolean => {
+  const settings = safeLoadLyricSettings();
+  return !!settings.highlightColor && validateColor(settings.highlightColor);
+};
+
+/**
  * 重置歌词主题色到默认值
  */
 export const resetLyricThemeColor = (): void => {

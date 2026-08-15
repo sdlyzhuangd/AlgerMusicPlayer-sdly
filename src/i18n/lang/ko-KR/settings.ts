@@ -91,7 +91,31 @@ export default {
     audioDeviceDesc: '스피커, 헤드폰 또는 블루투스 장치와 같은 오디오 출력 장치 선택',
     testAudio: '테스트',
     selectAudioDevice: '출력 장치 선택',
-    showStatusBar: '상태바 제어 기능 표시 여부',
+
+    // Bit-Perfect 전용 출력
+    bitPerfect: {
+      title: 'Bit-Perfect 전용 출력',
+      desc: '로컬 음악을 WASAPI 전용 모드로 출력하여 시스템 믹싱과 리샘플링을 우회하는 무손실 원본 출력 (Windows 전용)',
+      unsupported: '이 환경에서는 지원되지 않습니다 (Windows 및 네이티브 모듈 필요)',
+      enabledHint: '활성화됨: 로컬 음악은 전용 출력을 사용하며 재생 중 볼륨/EQ/배속이 비활성화됩니다',
+      device: '전용 출력 장치',
+      deviceDesc: '전용 출력에 사용할 오디오 장치 선택',
+      defaultDevice: '시스템 기본 장치',
+      sessionActive: 'Bit-Perfect 세션 활성화됨',
+      idleHint: '활성화하면 로컬 음악 재생 시 자동 적용; 현재 활성 세션 없음',
+      mode: {
+        exclusive: '전용 모드',
+        shared: '공유 폴백'
+      },
+      fields: {
+        device: '장치',
+        sampleRate: '샘플레이트',
+        format: '비트 뎁스',
+        channels: '채널'
+      },
+      mono: '모노'
+    },
+    showStatusBar: '상태 표시줄 표시',
     showStatusBarContent: 'Mac 상태바에 음악 제어 기능을 표시할 수 있습니다 (재시작 후 적용)',
     fallbackParser: '대체 분석 서비스 (GD Music)',
     fallbackParserDesc:

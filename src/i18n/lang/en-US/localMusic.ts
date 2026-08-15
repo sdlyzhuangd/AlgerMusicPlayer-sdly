@@ -5,10 +5,13 @@ export default {
   scanning: 'Scanning...',
   scanComplete: 'Scan Complete',
   playAll: 'Play All',
+  playAlbum: 'Play Album',
+  cueAlbum: 'CUE Album',
   search: 'Search local music',
   emptyState: 'No local music found. Please select a folder to scan.',
   fileNotFound: 'File not found or has been moved',
   rescan: 'Rescan',
+  clearAndRescan: 'Clear & Rescan',
   songCount: '{count} songs',
   removeFromLibrary: 'Remove from Library',
   removedFromLibrary: 'Removed from library (file not deleted)'

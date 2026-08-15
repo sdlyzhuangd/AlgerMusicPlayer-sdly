@@ -57,10 +57,68 @@
     </div>
     <div class="music-content">
       <div class="music-content-title flex items-center">
-        <n-ellipsis class="text-ellipsis" line-clamp="1">
+        <n-ellipsis class="text-ellipsis min-w-0 flex-1" line-clamp="1">
           <p v-html="playMusic?.name || ''"></p>
         </n-ellipsis>
         <span v-if="playbackRate !== 1.0" class="playback-rate-badge"> {{ playbackRate }}x </span>
+        <!-- Bit-Perfect 状态徽章：金色小锁 + WASAPI 模式 + 音频规格，悬停查看专辑/目录等详情 -->
+        <n-tooltip
+          v-if="bpBadgeVisible"
+          trigger="hover"
+          placement="top"
+          :z-index="9999999"
+          :content-style="bpTipContentStyle"
+        >
+          <template #trigger>
+            <span class="bp-badge" :class="bpBadgeClass">
+              <i class="ri-lock-2-fill bp-badge-lock"></i>
+              <span class="bp-badge-main">{{ bpBadgeText }}</span>
+              <span v-if="bpBadgeSpecs" class="bp-badge-specs">{{ bpBadgeSpecs }}</span>
+            </span>
+          </template>
+          <div class="bp-tip">
+            <div class="bp-tip-header">
+              <i class="ri-lock-2-fill bp-tip-lock"></i>
+              <span>{{ bpBadgeText }}</span>
+            </div>
+            <div class="bp-tip-body">
+              <div class="bp-tip-row">
+                <span class="bp-tip-label">{{ t('player.playBar.bitPerfect.mode') }}</span>
+                <span class="bp-tip-value">{{ bpModeText }}</span>
+              </div>
+              <div v-if="bpTipDevice" class="bp-tip-row">
+                <span class="bp-tip-label">{{ t('player.playBar.bitPerfect.device') }}</span>
+                <span class="bp-tip-value">{{ bpTipDevice }}</span>
+              </div>
+              <div class="bp-tip-divider"></div>
+              <div v-if="bpAlbum" class="bp-tip-row">
+                <span class="bp-tip-label">{{ t('player.playBar.bitPerfect.album') }}</span>
+                <span class="bp-tip-value">{{ bpAlbum }}</span>
+              </div>
+              <div v-if="bpDirectory" class="bp-tip-row">
+                <span class="bp-tip-label">{{ t('player.playBar.bitPerfect.directory') }}</span>
+                <span class="bp-tip-value bp-tip-path">{{ bpDirectory }}</span>
+              </div>
+              <div class="bp-tip-divider"></div>
+              <div v-if="bpFormat" class="bp-tip-row">
+                <span class="bp-tip-label">{{ t('player.playBar.bitPerfect.format') }}</span>
+                <span class="bp-tip-value">{{ bpFormat }}</span>
+              </div>
+              <div v-if="bpSampleRate" class="bp-tip-row">
+                <span class="bp-tip-label">{{ t('player.playBar.bitPerfect.sampleRate') }}</span>
+                <span class="bp-tip-value">{{ bpSampleRate }}</span>
+              </div>
+              <div v-if="bpBitDepth" class="bp-tip-row">
+                <span class="bp-tip-label">{{ t('player.playBar.bitPerfect.bitDepth') }}</span>
+                <span class="bp-tip-value">{{ bpBitDepth }}</span>
+              </div>
+              <div v-if="bpChannels" class="bp-tip-row">
+                <span class="bp-tip-label">{{ t('player.playBar.bitPerfect.channels') }}</span>
+                <span class="bp-tip-value">{{ bpChannels }}</span>
+              </div>
+            </div>
+          </div>
+        </n-tooltip>
       </div>
       <div class="music-content-name">
         <n-ellipsis
@@ -205,13 +263,138 @@ import { usePlaybackControl } from '@/hooks/usePlaybackControl';
 import { usePlayMode } from '@/hooks/usePlayMode';
 import { useVolumeControl } from '@/hooks/useVolumeControl';
 import { audioService } from '@/services/audioService';
+import { useBitPerfectStore } from '@/store/modules/bitPerfect';
 import { usePlayerStore } from '@/store/modules/player';
 import { useSettingsStore } from '@/store/modules/settings';
 import { getImgUrl, isElectron, isMobile, secondToMinute, setAnimationClass } from '@/utils';
 
+const bpStore = useBitPerfectStore();
 const playerStore = usePlayerStore();
 const settingsStore = useSettingsStore();
 const { t } = useI18n();
+
+// ==================== Bit-Perfect 状态徽章 ====================
+
+/** tooltip 使用自绘面板，去掉 naive 默认容器样式 */
+const bpTipContentStyle = {
+  padding: '0',
+  background: 'transparent',
+  border: 'none',
+  boxShadow: 'none'
+};
+
+const bpBadgeVisible = computed(() => bpStore.session.active);
+
+/** WASAPI 模式文本（独占 / 共享 / 降级） */
+const bpModeText = computed(() => {
+  const s = bpStore.session;
+  const i18n = 'player.playBar.bitPerfect.';
+  if (s.shareMode === 'exclusive') return t(`${i18n}exclusive`);
+  if (s.shareMode === 'shared-fallback') return t(`${i18n}sharedFallback`);
+  return t(`${i18n}shared`);
+});
+
+/** 徽章主文本：Bit-Perfect · WASAPI 独占/共享 */
+const bpBadgeText = computed(() => {
+  if (!bpBadgeVisible.value) return '';
+  return `${t('player.playBar.bitPerfect.title')} · ${bpModeText.value}`;
+});
+
+/** 徽章配色：独占 = 金色发光，共享（含降级）= 暗金 */
+const bpBadgeClass = computed(() =>
+  bpStore.isExclusive() ? 'bp-badge-exclusive' : 'bp-badge-shared'
+);
+
+/** 当前本地文件真实路径（local:///C:/... → C:/...） */
+const bpLocalFilePath = computed(() => {
+  const url = playMusic.value?.playMusicUrl || '';
+  if (!url.startsWith('local:///')) return '';
+  try {
+    let p = decodeURIComponent(url.replace('local:///', ''));
+    if (/^\/[a-zA-Z]:\//.test(p)) p = p.slice(1);
+    return p;
+  } catch {
+    return '';
+  }
+});
+
+/** 文件容器格式（FLAC / WAV / MP3 ...） */
+const bpFileFormat = computed(() => {
+  const p = bpLocalFilePath.value;
+  const ext = p.slice(p.lastIndexOf('.') + 1).toUpperCase();
+  return ['FLAC', 'WAV', 'MP3', 'OGG', 'M4A', 'AAC', 'APE', 'ALAC'].includes(ext) ? ext : '';
+});
+
+/** 实际输出 PCM 格式（f32/s32/s24/s16 → 可读文本） */
+const bpOutputFormatText = computed(() => {
+  const f = bpStore.session.format;
+  const map: Record<string, string> = {
+    f32: 'PCM 32bit Float',
+    s32: 'PCM 32bit',
+    s24: 'PCM 24bit',
+    s16: 'PCM 16bit',
+    u8: 'PCM 8bit'
+  };
+  return (f && (map[f] || f.toUpperCase())) || '';
+});
+
+/** 音频格式：文件容器，缺省时回退输出 PCM 格式 */
+const bpFormat = computed(() => {
+  const fileFmt = bpFileFormat.value;
+  const outFmt = bpOutputFormatText.value;
+  if (fileFmt && outFmt && !outFmt.startsWith(fileFmt)) return `${fileFmt} · ${outFmt}`;
+  return fileFmt || outFmt || '';
+});
+
+/** 采样率：优先本地元数据（文件真实规格），回退会话实际输出 */
+const bpSampleRate = computed(() => {
+  const rate = playMusic.value?.sampleRate || bpStore.session.sampleRate || 0;
+  if (!rate) return '';
+  const khz = rate / 1000;
+  return `${khz % 1 === 0 ? khz.toFixed(0) : khz.toFixed(1)} kHz`;
+});
+
+/** 位深：优先本地元数据（文件真实规格），回退会话输出格式 */
+const bpBitDepth = computed(() => {
+  const f = bpStore.session.format;
+  const depthFromFormat =
+    f === 'f32' ? 32 : f === 's32' ? 32 : f === 's24' ? 24 : f === 's16' ? 16 : 0;
+  const bits = playMusic.value?.bitsPerSample || depthFromFormat || 0;
+  return bits ? `${bits} bit` : '';
+});
+
+/** 声道数 */
+const bpChannels = computed(() => {
+  const ch = bpStore.session.channels;
+  return ch ? `${ch} ch` : '';
+});
+
+/** 徽章尾部规格摘要：格式 · 采样率 · 位深 · 声道 */
+const bpBadgeSpecs = computed(() =>
+  [bpFileFormat.value, bpSampleRate.value, bpBitDepth.value, bpChannels.value]
+    .filter(Boolean)
+    .join(' · ')
+);
+
+/** tooltip：专辑 */
+const bpAlbum = computed(() => {
+  const m = playMusic.value;
+  return (
+    m?.al?.name || m?.album?.name || (m?.song?.album as { name?: string } | undefined)?.name || ''
+  );
+});
+
+/** tooltip：文件所在目录 */
+const bpDirectory = computed(() => {
+  const p = bpLocalFilePath.value;
+  if (!p) return '';
+  const sep = p.includes('\\') ? '\\' : '/';
+  const idx = p.lastIndexOf(sep);
+  return idx > 0 ? p.slice(0, idx) : '';
+});
+
+/** tooltip：输出设备 */
+const bpTipDevice = computed(() => bpStore.session.deviceName || '');
 
 // 播放控制
 const { isPlaying: play, playMusicEvent, handleNext, handlePrev } = usePlaybackControl();
@@ -346,7 +529,9 @@ const openPlayListDrawer = () => {
   }
 
   .music-content {
-    width: 200px;
+    flex: 0 1 auto;
+    min-width: 140px;
+    max-width: 400px;
     @apply ml-4;
 
     &-title {
@@ -658,5 +843,63 @@ const openPlayListDrawer = () => {
   @apply ml-2 px-1.5 h-4 flex items-center text-xs rounded bg-green-500 bg-opacity-15 text-green-600 dark:text-green-400;
   font-weight: 500;
   vertical-align: 1px;
+}
+
+// Bit-Perfect 状态徽章（金色小锁 + WASAPI 模式 + 音频规格）
+.bp-badge {
+  @apply ml-2 px-1.5 h-[18px] flex items-center gap-1 rounded text-[11px] font-medium;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: default;
+  background: linear-gradient(135deg, rgba(255, 200, 60, 0.18), rgba(255, 165, 0, 0.1));
+  border: 1px solid rgba(255, 195, 40, 0.45);
+  color: #e8b64c;
+}
+
+.bp-badge-lock {
+  font-size: 11px;
+  line-height: 1;
+  color: #f5c518;
+  text-shadow: 0 0 4px rgba(245, 197, 24, 0.5);
+}
+
+.bp-badge-main {
+  font-weight: 600;
+}
+
+.bp-badge-specs {
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.bp-badge-exclusive {
+  box-shadow:
+    0 0 10px rgba(245, 197, 24, 0.28),
+    inset 0 0 6px rgba(245, 197, 24, 0.08);
+
+  .bp-badge-lock {
+    animation: bp-lock-glow 2.4s ease-in-out infinite;
+  }
+}
+
+.bp-badge-shared {
+  border-color: rgba(255, 195, 40, 0.28);
+  color: #c9a86a;
+  background: linear-gradient(135deg, rgba(255, 200, 60, 0.1), rgba(255, 165, 0, 0.05));
+
+  .bp-badge-lock {
+    color: #b3924a;
+    text-shadow: none;
+  }
+}
+
+@keyframes bp-lock-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 3px rgba(245, 197, 24, 0.5);
+  }
+  50% {
+    text-shadow: 0 0 9px rgba(245, 197, 24, 0.95);
+  }
 }
 </style>

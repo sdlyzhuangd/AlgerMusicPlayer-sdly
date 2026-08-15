@@ -88,6 +88,30 @@ export default {
     audioDeviceDesc: '选择音频输出设备，如扬声器、耳机或蓝牙设备',
     testAudio: '测试',
     selectAudioDevice: '选择输出设备',
+
+    // Bit-Perfect 独占输出
+    bitPerfect: {
+      title: 'Bit-Perfect 独占输出',
+      desc: '本地音乐通过 WASAPI 独占输出，绕过系统混音与重采样，实现无损原样输出（需 Windows）',
+      unsupported: '当前环境不支持（需要 Windows 且原生模块可用）',
+      enabledHint: '已启用：本地音乐将走独占输出，音量/EQ/倍速在播放时无效',
+      device: '独占输出设备',
+      deviceDesc: '选择用于独占输出的音频设备',
+      defaultDevice: '系统默认设备',
+      sessionActive: 'Bit-Perfect 会话进行中',
+      idleHint: '开启后播放本地音乐时自动启用；当前无活跃会话',
+      mode: {
+        exclusive: '独占模式',
+        shared: '共享回退'
+      },
+      fields: {
+        device: '设备',
+        sampleRate: '采样率',
+        format: '位深度',
+        channels: '声道'
+      },
+      mono: '单声道'
+    },
     showStatusBar: '是否显示状态栏控制功能',
     showStatusBarContent: '可以在您的mac状态栏显示音乐控制功能(重启后生效)',
 

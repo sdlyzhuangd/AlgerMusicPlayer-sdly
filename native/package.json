@@ -1,0 +1,9 @@
+{
+  "name": "bp-output",
+  "version": "0.1.0",
+  "description": "Bit-Perfect WASAPI exclusive output native module (miniaudio + N-API)",
+  "main": "index.js",
+  "gypfile": true,
+  "private": true,
+  "os": ["win32"]
+}

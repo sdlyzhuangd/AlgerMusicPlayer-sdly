@@ -21,6 +21,16 @@
 <div align="center">
   <a href="https://hellogithub.com/repository/607b849c598d48e08fe38789d156ebdc" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=607b849c598d48e08fe38789d156ebdc&claim_uid=ObuMXUfeHBmk9TI&theme=neutral" alt="Featured｜HelloGitHub" width="160" height="32" /></a>
 </div>
+### 本项目仅在原作者项目上，深度增加了如下功能和说明：
+
+- 原生C++支持Bit-Perfect,WASAPI独占支持。
+- CUE专辑和普通专辑（非cue）的支持，并分组
+- 歌词的优化和同步滚动显示
+- 为外置DAC播放器特别定制。  由于安卓系统支持原生输出的项目较多，赞无修改安卓支持的计划。
+- 本修改者**公众号sdlyzhuangd**。内有关于达菲（Daphile）数播的优秀插件及配套控制程序，带给你不一样的体验。
+- 请支持原作者。一起权益均归原作者所有。
+
+
 
 [项目下安装以及常用问题文档](https://www.yuque.com/alger-pfg5q/ip4f1a/bmgmfmghnhgwghkm?singleDoc#)
 

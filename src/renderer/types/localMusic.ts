@@ -32,6 +32,22 @@ export type LocalMusicMeta = {
   fileSize: number;
   /** 文件修改时间戳 */
   modifiedTime: number;
+  /** 采样率（Hz），解析失败时为 0 */
+  sampleRate: number;
+  /** 位深度（bit），无损/未压缩格式有效，解析失败时为 0 */
+  bitsPerSample: number;
+  /**
+   * CUE 子轨信息（存在即表示该条目是 CUE 分轨的子轨道）：
+   * 引用（整轨或多文件）音频文件的绝对路径。
+   * filePath 对 CUE 子轨也指向该音频文件（播放/存在性检查共用）。
+   */
+  cueFrom?: string;
+  /** TRACK 编号（从 1 开始，见实现指南 7.5：cueIndex > 0 即 CUE 子轨） */
+  cueIndex?: number;
+  /** 子轨在音频文件中的起始秒数（INDEX 01） */
+  cueOffset?: number;
+  /** 子轨时长（秒） */
+  cueDuration?: number;
 };
 
 /**

@@ -81,18 +81,18 @@ export default {
     noForce: '不强制捐赠，点击即可进入'
   },
   coffee: {
-    title: '请我喝咖啡',
-    alipay: '支付宝',
+    title: '请原作者我喝咖啡',
+    alipay: '',
     wechat: '微信支付',
     alipayQR: '支付宝收款码',
     wechatQR: '微信收款码',
     coffeeDesc: '一杯咖啡，一份支持',
     coffeeDescLinkText: '查看更多',
-    groupText: '微信公众号：AlgerMusic',
+    groupText: '原作者微信公众号：AlgerMusic',
     messages: {
       copySuccess: '已复制到剪贴板'
     },
-    donateList: '请我喝咖啡'
+    donateList: '请原作者喝咖啡'
   },
   playlistType: {
     title: '歌单分类',

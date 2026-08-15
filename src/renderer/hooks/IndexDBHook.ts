@@ -179,6 +179,24 @@ const useIndexedDB = async <T extends string, S extends Record<T, Record<string,
     });
   };
 
+  // 清空表数据
+  const clearData = <K extends T>(storeName: K) => {
+    return new Promise<void>((resolve, reject) => {
+      if (!db.value) return reject('数据库未初始化');
+      const tx = db.value.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      const request = store.clear();
+
+      request.onsuccess = () => {
+        resolve();
+      };
+
+      request.onerror = (event) => {
+        reject((event.target as IDBRequest).error);
+      };
+    });
+  };
+
   return {
     initDB,
     addData,
@@ -186,7 +204,8 @@ const useIndexedDB = async <T extends string, S extends Record<T, Record<string,
     getData,
     deleteData,
     getAllData,
-    getDataWithPagination
+    getDataWithPagination,
+    clearData
   };
 };
 

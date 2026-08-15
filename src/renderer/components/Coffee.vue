@@ -13,8 +13,10 @@
       </template>
 
       <div class="p-6 rounded-lg shadow-lg bg-light dark:bg-gray-800">
-        <div class="flex gap-10">
+        <!-- <div class="flex gap-10"> -->
+          <div class="mt-4">   
           <div class="flex flex-col items-center gap-2">
+             
             <n-image
               :src="alipayQR"
               :alt="t('comp.coffee.alipayQR')"
@@ -25,7 +27,7 @@
               t('comp.coffee.alipay')
             }}</span>
           </div>
-          <div class="flex flex-col items-center gap-2">
+          <!-- <div class="flex flex-col items-center gap-2">
             <n-image
               :src="wechatQR"
               :alt="t('comp.coffee.wechatQR')"
@@ -35,9 +37,8 @@
             <span class="text-sm text-gray-700 dark:text-gray-200">{{
               t('comp.coffee.wechat')
             }}</span>
-          </div>
+          </div> -->
         </div>
-
         <div class="mt-4">
           <p
             class="text-sm text-gray-700 dark:text-gray-200 text-center cursor-pointer hover:text-green-500"
@@ -55,6 +56,22 @@
             {{ t('comp.coffee.donateList') }}
           </p>
         </div>
+
+
+        <div class="mt-4">
+          <div class="flex flex-col items-center gap-2">
+            <n-image
+              :src="sdlyzhuangdQR"
+              alt="深度定制者sdlyzhuangd"
+              class="w-32 h-32 rounded-lg cursor-none"
+              preview-disabled
+            />
+            <span class="text-sm text-gray-700 dark:text-gray-200">深度定制者公众号</span>
+          </div>
+        </div>
+
+
+
       </div>
     </n-popover>
   </div>
@@ -65,6 +82,7 @@ import { NButton, NImage, NPopover, useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 
 import alipay from '@/assets/alipay.png';
+import sdlyzhuangd from '@/assets/sdlyzhuangd.jpg';
 import wechat from '@/assets/wechat.png';
 
 const { t } = useI18n();
@@ -87,6 +105,10 @@ defineProps({
   wechatQR: {
     type: String,
     default: wechat
+  },
+  sdlyzhuangdQR: {
+    type: String,
+    default: sdlyzhuangd
   }
 });
 </script>

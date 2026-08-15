@@ -77,6 +77,18 @@ export interface SongResult {
   dt?: number;
   isFirstPlay?: boolean;
   isPodcast?: boolean;
+  /** 采样率（Hz），本地音乐元数据解析所得，BP 分流与状态徽章使用 */
+  sampleRate?: number;
+  /** 位深度（bit），本地音乐元数据解析所得（无损/未压缩格式有效） */
+  bitsPerSample?: number;
+  /** CUE 子轨：音频文件绝对路径（filePath 也指向它） */
+  cueFrom?: string;
+  /** CUE 子轨：TRACK 编号（> 0 即 CUE 子轨） */
+  cueIndex?: number;
+  /** CUE 子轨：在音频文件中的起始秒数 */
+  cueOffset?: number;
+  /** CUE 子轨：时长（秒） */
+  cueDuration?: number;
 }
 
 export interface Song {

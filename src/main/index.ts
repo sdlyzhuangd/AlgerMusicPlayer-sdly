@@ -24,23 +24,21 @@ process.on('unhandledRejection', (reason) => {
 // 必须在 app.whenReady() 之前注册自定义协议为特权协议，
 // 否则 http(s) 页面（dev server、生产环境的 file://）无法把 local:// 当成
 // 安全/可 fetch/可流式的资源加载，会触发 CORS 拦截或 net::ERR_UNKNOWN_URL_SCHEME
+//
+// 特权配置统一放在 src/shared/localScheme.ts（含“不能加 standard: true”的原因说明），
+// 主进程与回归测试共用同一份，防止误改导致 Windows 盘符路径播放回归。
 protocol.registerSchemesAsPrivileged([
   {
-    scheme: 'local',
-    privileges: {
-      standard: true,
-      secure: true,
-      supportFetchAPI: true,
-      stream: true,
-      bypassCSP: true,
-      corsEnabled: true
-    }
+    scheme: LOCAL_SCHEME,
+    privileges: LOCAL_SCHEME_PRIVILEGES
   }
 ]);
 
 import type { Language } from '../i18n/main';
 import i18n from '../i18n/main';
+import { LOCAL_SCHEME, LOCAL_SCHEME_PRIVILEGES } from '../shared/localScheme';
 import { loadLyricWindow } from './lyric';
+import { initializeBpOutput, shutdownBpOutput } from './modules/bpOutputManager';
 import { initializeCacheManager } from './modules/cache';
 import { initializeConfig } from './modules/config';
 import { initializeDownloadManager, setDownloadManagerWindow } from './modules/downloadManager';
@@ -100,6 +98,9 @@ function initialize(configStore: any) {
 
   // 设置下载管理器窗口引用
   setDownloadManagerWindow(mainWindow);
+
+  // 初始化 Bit-Perfect 输出（原生模块缺失时自动降级，不阻塞）
+  initializeBpOutput(mainWindow);
 
   // 初始化托盘
   initializeTray(iconPath, mainWindow);
@@ -239,6 +240,8 @@ if (!isSingleInstance) {
   app.on('before-quit', () => {
     // 设置退出标志
     setAppQuitting(true);
+    // 强制清理 Bit-Perfect 会话，避免 WASAPI 独占句柄残留
+    shutdownBpOutput();
   });
 
   // 重启应用

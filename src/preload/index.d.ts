@@ -39,11 +39,35 @@ interface API {
   /** 扫描指定文件夹中的本地音乐文件（包含修改时间） */
   scanLocalMusicWithStats: (
     folderPath: string
-  ) => Promise<{ files: { path: string; modifiedTime: number }[]; count: number }>;
+  ) => Promise<{
+    files: { path: string; modifiedTime: number }[];
+    cueFiles: { path: string; modifiedTime: number }[];
+    count: number;
+  }>;
   /** 批量解析本地音乐文件元数据 */
   parseLocalMusicMetadata: (
     filePaths: string[]
   ) => Promise<import('../renderer/types/localMusic').LocalMusicMeta[]>;
+  /** 读取文本文件（自动检测编码），供 CUE 解析与旁挂 .lrc 歌词匹配 */
+  readLocalTextFile: (filePath: string) => Promise<string | null>;
+  /** 列出目录下的文件名（旁挂 .lrc 歌词索引） */
+  listLocalDirectory: (dirPath: string) => Promise<string[]>;
+  /** 解析 CUE 分轨表 */
+  parseCueSheet: (
+    cueFilePath: string
+  ) => Promise<{
+    albumTitle: string;
+    albumArtist: string;
+    isMultiFile: boolean;
+    tracks: {
+      index: number;
+      title: string;
+      artist: string;
+      offset: number;
+      duration: number;
+      audioFile: string;
+    }[];
+  } | null>;
   // Download manager
   downloadAdd: (task: any) => Promise<string>;
   downloadAddBatch: (tasks: any) => Promise<{ batchId: string; taskIds: string[] }>;

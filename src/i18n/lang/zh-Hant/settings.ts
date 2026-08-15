@@ -88,6 +88,30 @@ export default {
     audioDeviceDesc: '選擇音訊輸出裝置，如揚聲器、耳機或藍牙裝置',
     testAudio: '測試',
     selectAudioDevice: '選擇輸出裝置',
+
+    // Bit-Perfect 獨佔輸出
+    bitPerfect: {
+      title: 'Bit-Perfect 獨佔輸出',
+      desc: '本地音樂透過 WASAPI 獨佔輸出，繞過系統混音與重採樣，實現無損原樣輸出（需 Windows）',
+      unsupported: '目前環境不支援（需要 Windows 且原生模組可用）',
+      enabledHint: '已啟用：本地音樂將走獨佔輸出，音量/EQ/倍速在播放時無效',
+      device: '獨佔輸出裝置',
+      deviceDesc: '選擇用於獨佔輸出的音訊裝置',
+      defaultDevice: '系統預設裝置',
+      sessionActive: 'Bit-Perfect 會話進行中',
+      idleHint: '開啟後播放本地音樂時自動啟用；目前無活躍會話',
+      mode: {
+        exclusive: '獨佔模式',
+        shared: '共用回退'
+      },
+      fields: {
+        device: '裝置',
+        sampleRate: '取樣率',
+        format: '位深度',
+        channels: '聲道'
+      },
+      mono: '單聲道'
+    },
     showStatusBar: '是否顯示狀態列控制功能',
     showStatusBarContent: '可以在您的mac狀態列顯示音樂控制功能(重啟後生效)',
     fallbackParser: '備用解析服務 (GD音樂台)',

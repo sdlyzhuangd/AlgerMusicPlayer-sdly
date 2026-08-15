@@ -117,6 +117,7 @@ export const usePlayerStore = defineStore('player', () => {
     setMuted: playerCore.setMuted,
     toggleMute: playerCore.toggleMute,
     handlePause: playerCore.handlePause,
+    togglePlay: playerCore.togglePlay,
 
     // ========== 播放列表管理 (Playlist) ==========
     playList,

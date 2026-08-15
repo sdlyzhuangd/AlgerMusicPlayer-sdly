@@ -115,10 +115,30 @@ export const usePlayerCoreStore = defineStore(
     };
 
     /**
+     * Bit-Perfect 会话是否处于激活状态（懒加载 store 避免循环依赖）
+     */
+    const isBpSessionActive = async (): Promise<boolean> => {
+      try {
+        const { useBitPerfectStore } = await import('@/store/modules/bitPerfect');
+        return useBitPerfectStore().isActive();
+      } catch {
+        return false;
+      }
+    };
+
+    /**
      * 暂停播放
      */
     const handlePause = async () => {
       try {
+        // Bit-Perfect 会话激活时走原生暂停
+        if (await isBpSessionActive()) {
+          const { useBitPerfectStore } = await import('@/store/modules/bitPerfect');
+          await useBitPerfectStore().pause();
+          setPlayMusic(false);
+          userPlayIntent.value = false;
+          return;
+        }
         const currentSound = audioService.getCurrentSound();
         if (currentSound) {
           currentSound.pause();
@@ -135,6 +155,18 @@ export const usePlayerCoreStore = defineStore(
      */
     const setPlayMusic = async (value: boolean | SongResult) => {
       if (typeof value === 'boolean') {
+        // Bit-Perfect 会话激活时：恢复/暂停走原生链路
+        if (value && (await isBpSessionActive())) {
+          try {
+            const { useBitPerfectStore } = await import('@/store/modules/bitPerfect');
+            await useBitPerfectStore().play();
+            setIsPlay(true);
+            userPlayIntent.value = true;
+            return;
+          } catch (error) {
+            console.error('BP 恢复播放失败:', error);
+          }
+        }
         setIsPlay(value);
         userPlayIntent.value = value;
       } else {
@@ -143,6 +175,26 @@ export const usePlayerCoreStore = defineStore(
         play.value = true;
         isPlay.value = true;
         userPlayIntent.value = true;
+      }
+    };
+
+    /**
+     * 切换播放/暂停（供播放条按钮等 UI 使用，自动适配 BP 会话）
+     */
+    const togglePlay = async () => {
+      if (await isBpSessionActive()) {
+        const bp = await import('@/store/modules/bitPerfect').then((m) => m.useBitPerfectStore());
+        if (bp.session.playing) {
+          await handlePause();
+        } else {
+          await setPlayMusic(true);
+        }
+        return;
+      }
+      if (isPlay.value) {
+        await handlePause();
+      } else {
+        await setPlayMusic(true);
       }
     };
 
@@ -214,6 +266,7 @@ export const usePlayerCoreStore = defineStore(
       setMuted,
       toggleMute,
       handlePause,
+      togglePlay,
       refreshAudioDevices,
       setAudioOutputDevice,
       initAudioDeviceListener

@@ -106,8 +106,7 @@
             ref="lrcSider"
             class="music-lrc"
             :native-scrollbar="false"
-            @mouseover="mouseOverLayout"
-            @mouseleave="mouseLeaveLayout"
+            @wheel.passive="handleLayoutWheel"
           >
             <!-- 歌曲信息 -->
             <div class="music-lrc-container">
@@ -291,7 +290,9 @@ watch(
 );
 
 const supportAutoScroll = computed(() => {
-  return lrcArray.value.length > 0 && lrcArray.value[0].startTime !== -1;
+  // 只要存在带时间戳的歌词行即可自动滚动（解析器会把无时间戳的纯文本行排到数组头部，
+  // 不能只看 lrcArray[0]；与 MusicHook 的对象分支守卫保持一致）
+  return lrcArray.value.some((l) => l.startTime !== -1);
 });
 
 const props = defineProps({
@@ -322,10 +323,8 @@ const lrcScroll = (behavior: ScrollBehavior = 'smooth', forceTop: boolean = fals
   if (!isVisible.value || !lrcSider.value || !supportAutoScroll.value) return;
 
   if (forceTop) {
-    lrcSider.value.scrollTo({
-      top: 0,
-      behavior
-    });
+    const container = lrcSider.value.$el?.querySelector('.n-scrollbar-container') as HTMLElement;
+    if (container) container.scrollTo({ top: 0, behavior });
     return;
   }
 
@@ -333,11 +332,13 @@ const lrcScroll = (behavior: ScrollBehavior = 'smooth', forceTop: boolean = fals
 
   const nowEl = document.querySelector(`#music-lrc-text-${nowIndex.value}`) as HTMLElement;
   if (nowEl) {
-    const containerHeight = lrcSider.value.$el.clientHeight;
+    const container = lrcSider.value.$el?.querySelector('.n-scrollbar-container') as HTMLElement;
+    if (!container) return;
+    const containerHeight = container.clientHeight;
     const elementTop = nowEl.offsetTop;
     const scrollTop = elementTop - containerHeight / 2 + nowEl.clientHeight / 2;
 
-    lrcSider.value.scrollTo({
+    container.scrollTo({
       top: scrollTop,
       behavior
     });
@@ -346,25 +347,22 @@ const lrcScroll = (behavior: ScrollBehavior = 'smooth', forceTop: boolean = fals
 
 const debouncedLrcScroll = useDebounceFn(lrcScroll, 200);
 
-const mouseOverLayout = () => {
-  if (isMobile.value) {
-    return;
-  }
-  isMouse.value = true;
-};
+// 仅当用户主动滚动歌词（滚轮）时临时暂停自动滚动，3 秒无操作后恢复并回到当前句。
+// 注意：不能“鼠标悬停即暂停”——全屏抽屉打开后鼠标基本都落在歌词区，
+// 悬停暂停会让歌词永远无法同步滚动（桌面歌词窗口无此限制，故能同步）。
+let manualScrollTimer: ReturnType<typeof setTimeout> | null = null;
 
-const mouseLeaveLayout = () => {
-  if (isMobile.value) {
-    return;
-  }
-  setTimeout(() => {
+const handleLayoutWheel = () => {
+  if (isMobile.value) return;
+  isMouse.value = true;
+  if (manualScrollTimer) clearTimeout(manualScrollTimer);
+  manualScrollTimer = setTimeout(() => {
     isMouse.value = false;
     lrcScroll();
-  }, 2000);
+  }, 3000);
 };
 
 watch(nowIndex, () => {
-  // 歌曲切换时不自动滚动
   if (isSongChanging.value) return;
   debouncedLrcScroll();
 });
@@ -373,6 +371,7 @@ watch(
   () => isVisible.value,
   () => {
     if (isVisible.value) {
+      isMouse.value = false;
       nextTick(() => {
         lrcScroll('instant');
       });
@@ -582,11 +581,14 @@ onMounted(() => {
 
 // 移除滚动监听和全屏状态监听
 onBeforeUnmount(() => {
+  if (manualScrollTimer) {
+    clearTimeout(manualScrollTimer);
+    manualScrollTimer = null;
+  }
   if (lrcSider.value?.$el) {
     lrcSider.value.$el.removeEventListener('scroll', handleScroll);
   }
   document.removeEventListener('fullscreenchange', handleFullScreenChange);
-  // 退出全屏模式
   if (document.fullscreenElement) {
     document.exitFullscreen();
   }

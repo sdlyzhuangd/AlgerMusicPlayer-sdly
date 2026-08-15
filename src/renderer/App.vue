@@ -152,6 +152,9 @@ onMounted(async () => {
   // 设置 URL 过期自动续播处理器
   const { setupUrlExpiredHandler } = await import('@/services/playbackController');
   setupUrlExpiredHandler();
+  // 初始化 Bit-Perfect 输出（探测原生模块 + 加载设备列表 + 订阅会话事件）
+  const { useBitPerfectStore } = await import('@/store/modules/bitPerfect');
+  await useBitPerfectStore().init();
   // 初始化播放状态
   await playerStore.initializePlayState();
 

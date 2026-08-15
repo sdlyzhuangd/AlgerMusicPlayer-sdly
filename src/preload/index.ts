@@ -83,6 +83,11 @@ const api = {
     ipcRenderer.invoke('scan-local-music-with-stats', folderPath),
   parseLocalMusicMetadata: (filePaths: string[]) =>
     ipcRenderer.invoke('parse-local-music-metadata', filePaths),
+  // 读取文本文件（自动检测编码），供 CUE 解析与旁挂 .lrc 歌词匹配
+  readLocalTextFile: (filePath: string) => ipcRenderer.invoke('read-local-text-file', filePath),
+  parseCueSheet: (cueFilePath: string) => ipcRenderer.invoke('parse-cue-sheet', cueFilePath),
+  // 列出目录下的文件名（旁挂 .lrc 歌词索引）
+  listLocalDirectory: (dirPath: string) => ipcRenderer.invoke('list-local-directory', dirPath),
 
   // Download manager
   downloadAdd: (task: any) => ipcRenderer.invoke('download:add', task),
@@ -118,6 +123,23 @@ const api = {
     ipcRenderer.removeAllListeners('download:state-change');
     ipcRenderer.removeAllListeners('download:batch-complete');
     ipcRenderer.removeAllListeners('download:request-url');
+  },
+
+  // ==================== Bit-Perfect 输出 ====================
+  bpIsSupported: () => ipcRenderer.invoke('bp:is-supported') as Promise<boolean>,
+  bpListDevices: () => ipcRenderer.invoke('bp:list-devices') as Promise<any[]>,
+  bpOpen: (opts: { path: string; deviceId?: string; exclusive?: boolean }) =>
+    ipcRenderer.invoke('bp:open', opts) as Promise<any>,
+  bpPlay: () => ipcRenderer.invoke('bp:play') as Promise<boolean>,
+  bpPause: () => ipcRenderer.invoke('bp:pause') as Promise<boolean>,
+  bpSeek: (seconds: number) => ipcRenderer.invoke('bp:seek', seconds) as Promise<boolean>,
+  bpGetState: () => ipcRenderer.invoke('bp:get-state') as Promise<any>,
+  bpClose: () => ipcRenderer.invoke('bp:close') as Promise<boolean>,
+  onBpStateChanged: (callback: (state: any) => void) => {
+    ipcRenderer.on('bp-state-changed', (_event, state: any) => callback(state));
+  },
+  removeBpStateListeners: () => {
+    ipcRenderer.removeAllListeners('bp-state-changed');
   }
 };
 

@@ -16,6 +16,10 @@
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "dev:web": "vite dev",
+    "test": "npm run test:local-protocol && npm run test:cue-sheet",
+    "test:local-protocol": "node tests/local-protocol/run-all.cjs",
+    "test:cue-sheet": "node tests/cue-sheet/run.cjs",
+    "rebuild:bp": "cd native && _run.cmd",
     "build": "electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "fix-sandbox": "node scripts/fix-sandbox.js",
@@ -66,6 +70,7 @@
     "@electron-toolkit/eslint-config": "^2.1.0",
     "@electron-toolkit/eslint-config-ts": "^3.1.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
+    "@electron/rebuild": "^4.2.0",
     "@eslint/js": "^9.39.2",
     "@rushstack/eslint-patch": "^1.15.0",
     "@types/howler": "^2.2.12",
@@ -101,6 +106,7 @@
     "lodash": "^4.17.21",
     "marked": "^15.0.12",
     "naive-ui": "^2.43.2",
+    "node-addon-api": "^8.9.2",
     "pinia": "^3.0.4",
     "pinyin-match": "^1.2.10",
     "postcss": "^8.5.6",
@@ -138,7 +144,15 @@
         "filter": [
           "**/*"
         ]
+      },
+      {
+        "from": "native/build/Release/bp_output.node",
+        "to": "native/bp_output.node"
       }
+    ],
+    "asarUnpack": [
+      "**/native/**/*.node",
+      "**/*.node"
     ],
     "mac": {
       "icon": "resources/icon.icns",

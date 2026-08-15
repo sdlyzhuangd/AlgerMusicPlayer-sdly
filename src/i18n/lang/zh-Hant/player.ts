@@ -74,6 +74,20 @@ export default {
     miniPlayBar: '迷你播放列',
     playbackSpeed: '播放速度',
     advancedControls: '更多設定',
+    bitPerfect: {
+      title: 'Bit-Perfect',
+      exclusive: 'WASAPI 獨佔',
+      shared: 'WASAPI 共用',
+      sharedFallback: 'WASAPI 共用（獨佔失敗，已降級）',
+      mode: '模式',
+      device: '輸出設備',
+      album: '專輯',
+      directory: '檔案目錄',
+      format: '音訊格式',
+      sampleRate: '取樣率',
+      bitDepth: '位元深度',
+      channels: '聲道數'
+    },
     intelligenceMode: {
       title: '心動模式',
       needCookieLogin: '請使用 Cookie 方式登入後使用心動模式',

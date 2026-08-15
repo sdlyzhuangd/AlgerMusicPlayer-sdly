@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Readable } from 'stream';
 
+import { localUrlToFilePath } from '../../shared/localUrl';
 import { getStore } from './config';
 
 // 创建一个store实例用于存储音频缓存
@@ -73,19 +74,9 @@ export function initializeFileManager() {
   protocol.handle('local', async (request) => {
     try {
       // local:///<absolute-path>
-      let filePath = decodeURIComponent(request.url.replace(/^local:\/\/\/?/, ''));
-
-      // Windows: 协议解析后可能是 /C:/...，去掉前导斜杠
-      if (/^\/[a-zA-Z]:\//.test(filePath)) {
-        filePath = filePath.slice(1);
-      }
-
-      // macOS/Linux 上去掉前导斜杠后会丢失绝对路径标识，这里补回
-      if (process.platform !== 'win32' && !filePath.startsWith('/')) {
-        filePath = '/' + filePath;
-      }
-
-      filePath = path.normalize(filePath);
+      // 解码与平台斜杠处理统一走 shared/localUrl（与 filePathToLocalUrl 互为逆操作，
+      // 由 tests/local-protocol 覆盖往返一致性），此处只补 path.normalize
+      const filePath = path.normalize(localUrlToFilePath(request.url));
 
       const stat = await fs.promises.stat(filePath).catch(() => null);
       if (!stat?.isFile()) {

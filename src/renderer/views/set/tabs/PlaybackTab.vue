@@ -64,6 +64,9 @@
       >
         <audio-device-settings />
       </setting-item>
+
+      <!-- Bit-Perfect 独占输出（Windows 原生模块） -->
+      <bit-perfect-settings v-if="isElectron" />
     </setting-section>
 
     <div
@@ -99,6 +102,7 @@ import { computed, inject, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import AudioDeviceSettings from '@/components/settings/AudioDeviceSettings.vue';
+import BitPerfectSettings from '@/components/settings/BitPerfectSettings.vue';
 import MusicSourceSettings from '@/components/settings/MusicSourceSettings.vue';
 import { type Platform } from '@/types/music';
 import { isElectron } from '@/utils';

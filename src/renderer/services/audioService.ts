@@ -24,6 +24,9 @@ class AudioService {
   // 否则新歌 canplay 会同时触发旧歌的回调，导致"过期回调 stop 掉正在播放的新歌"卡死。
   private pendingLoadCleanup: (() => void) | null = null;
 
+  // CUE 子轨结束已处理标志（防 timeupdate 重复触发 / 与原生 ended 双切歌）
+  private cueEndHandled = false;
+
   private readonly frequencies = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
   private defaultEQSettings: { [key: string]: number } = {
@@ -86,7 +89,17 @@ class AudioService {
     });
 
     this.audio.addEventListener('timeupdate', () => {
-      // Consumers can listen to this if needed; mainly for MediaSession sync
+      // CUE 子轨结束检测（标准路径）：到达 cueOffset+duration 边界即切下一首
+      // （实现指南 4：timeupdate 监听子轨道结束，避免整轨播完才切歌）
+      const track = this.currentTrack;
+      if (track?.cueIndex && track.cueDuration && !this.cueEndHandled) {
+        const end = (track.cueOffset || 0) + track.cueDuration;
+        if (!this.audio.paused && this.audio.currentTime >= end - 0.15) {
+          this.cueEndHandled = true;
+          this.audio.pause();
+          this.emit('end');
+        }
+      }
     });
 
     this.audio.addEventListener('waiting', () => {
@@ -432,7 +445,9 @@ class AudioService {
 
     if (isSameUrl) {
       this.currentTrack = track;
-      if (seekTime > 0) this.audio.currentTime = seekTime;
+      this.cueEndHandled = false;
+      const abs = this.toAbsoluteTime(track, seekTime);
+      if (abs > 0) this.audio.currentTime = abs;
       if (isPlay) this.audio.play();
       this.updateMediaSessionMetadata(track);
       this.releaseOperationLock();
@@ -452,6 +467,7 @@ class AudioService {
       const tryPlay = () => {
         this._isLoading = true;
         this.currentTrack = track;
+        this.cueEndHandled = false;
 
         // Ensure EQ/AudioContext is set up (only runs once)
         this.setupEQ();
@@ -465,8 +481,10 @@ class AudioService {
           cleanup();
           this._isLoading = false;
 
-          if (seekTime > 0) {
-            this.audio.currentTime = seekTime;
+          // CUE 子轨：定位到 cueOffset（+恢复进度），而非文件开头（实现指南 4）
+          const abs = this.toAbsoluteTime(track, seekTime);
+          if (abs > 0) {
+            this.audio.currentTime = abs;
           }
 
           if (isPlay) {
@@ -537,6 +555,14 @@ class AudioService {
 
   public pause() {
     this.forceResetOperationLock();
+    // Bit-Perfect 会话激活时暂停走原生会话（本地音乐 + BP 启用场景）
+    if (this.isBpActive()) {
+      void import('@/store/modules/bitPerfect').then(({ useBitPerfectStore }) =>
+        useBitPerfectStore().pause()
+      );
+      this.emit('pause');
+      return;
+    }
     try {
       this.audio.pause();
     } catch (error) {
@@ -546,6 +572,13 @@ class AudioService {
 
   public stop() {
     this.forceResetOperationLock();
+    // Bit-Perfect 会话激活时同步关闭原生会话（切歌/停止时释放 WASAPI 设备，
+    // 避免 BP 歌曲切到非 BP 歌曲后原生会话仍在播放造成双路出声）
+    if (this.isBpActive()) {
+      void import('@/store/modules/bitPerfect').then(({ useBitPerfectStore }) =>
+        useBitPerfectStore().closeSession()
+      );
+    }
     // 移除尚未结算的加载监听器，避免 stop 后旧的 canplay/error 仍触发过期回调
     if (this.pendingLoadCleanup) {
       this.pendingLoadCleanup();
@@ -566,12 +599,70 @@ class AudioService {
 
   public seek(time: number) {
     this.forceResetOperationLock();
+    // Bit-Perfect 会话激活时 seek 走原生会话（bpStore 内部会叠加 CUE 偏移）
+    if (this.isBpActive()) {
+      void import('@/store/modules/bitPerfect').then(({ useBitPerfectStore }) =>
+        useBitPerfectStore().seek(time)
+      );
+      this.emit('seek_start', time);
+      this.emit('seek');
+      return;
+    }
     try {
       this.emit('seek_start', time);
-      this.audio.currentTime = Math.max(0, time);
+      // CUE 子轨：显示时间是子轨内时间，落盘定位需叠加 cueOffset（实现指南 4.5）
+      this.audio.currentTime = this.toAbsoluteTime(this.currentTrack, time);
       this.updateMediaSessionPositionState();
     } catch (error) {
       console.error('Seek操作失败:', error);
+    }
+  }
+
+  /**
+   * 将显示时间（子轨内时间）映射为音频文件中的绝对秒数。
+   * CUE 子轨：abs = cueOffset + time；普通歌曲：abs = time。
+   */
+  private toAbsoluteTime(track: SongResult | null, time: number): number {
+    if (track?.cueIndex) {
+      return Math.max(0, (track.cueOffset || 0) + Math.max(0, time));
+    }
+    return Math.max(0, time);
+  }
+
+  /**
+   * 当前播放位置（显示用）。CUE 子轨映射为子轨内时间，钳制在 [0, cueDuration]。
+   */
+  getDisplayPosition(): number {
+    const track = this.currentTrack;
+    const raw = this.audio.currentTime;
+    if (typeof raw !== 'number' || Number.isNaN(raw)) return 0;
+    if (track?.cueIndex) {
+      const local = raw - (track.cueOffset || 0);
+      const dur = track.cueDuration || 0;
+      return Math.max(0, Math.min(dur > 0 ? dur : local, local));
+    }
+    return raw;
+  }
+
+  /** 当前总时长（显示用）。CUE 子轨返回子轨时长而非整轨时长（实现指南 3.3）。 */
+  getDisplayDuration(): number {
+    const track = this.currentTrack;
+    if (track?.cueIndex && track.cueDuration) return track.cueDuration;
+    const duration = this.audio.duration;
+    return typeof duration === 'number' && Number.isFinite(duration) ? duration : 0;
+  }
+
+  /**
+   * Bit-Perfect 会话是否激活（同步读取全局引用，避免动态 import 的异步竞态）。
+   * bitPerfect store 在 init 时把自身挂到 window.__bpStore 上。
+   */
+  private isBpActive(): boolean {
+    try {
+      const store = (window as any).__bpStore;
+      if (!store) return false;
+      return store.isActive();
+    } catch {
+      return false;
     }
   }
 

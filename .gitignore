@@ -49,5 +49,18 @@ AGENTS.md
 # TypeScript 增量编译缓存
 *.tsbuildinfo
 
+# 本地协议回归测试的临时产物（tsc 转译 + 生成的音频/页面 fixture）
+tests/local-protocol/.tmp/
+tests/cue-sheet/.tmp/
+
+# native 构建产物
+native/build/
+native/node_modules/
+
 src/renderer/auto-imports.d.ts
 src/renderer/components.d.ts
+
+# 临时目录
+tmp/
+推送github.md
+

@@ -6,8 +6,8 @@ import { getSharedStore } from './config';
 const store = getSharedStore();
 
 // 默认窗口尺寸
-export const DEFAULT_MAIN_WIDTH = 1200;
-export const DEFAULT_MAIN_HEIGHT = 780;
+export const DEFAULT_MAIN_WIDTH = 1200;//1200
+export const DEFAULT_MAIN_HEIGHT = 760;//780
 export const DEFAULT_MINI_WIDTH = 340;
 export const DEFAULT_MINI_HEIGHT = 64;
 export const DEFAULT_MINI_EXPANDED_HEIGHT = 400;

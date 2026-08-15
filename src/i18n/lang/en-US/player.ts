@@ -75,6 +75,20 @@ export default {
     unFavorite: 'Unfavorite {name}',
     playbackSpeed: 'Playback Speed',
     advancedControls: 'Advanced Controls',
+    bitPerfect: {
+      title: 'Bit-Perfect',
+      exclusive: 'WASAPI Exclusive',
+      shared: 'WASAPI Shared',
+      sharedFallback: 'WASAPI Shared (exclusive failed, degraded)',
+      mode: 'Mode',
+      device: 'Device',
+      album: 'Album',
+      directory: 'Directory',
+      format: 'Format',
+      sampleRate: 'Sample Rate',
+      bitDepth: 'Bit Depth',
+      channels: 'Channels'
+    },
     intelligenceMode: {
       title: 'Intelligence Mode',
       needCookieLogin: 'Please login with Cookie method to use Intelligence Mode',

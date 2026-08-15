@@ -75,6 +75,20 @@ export default {
     miniPlayBar: 'ミニ再生バー',
     playbackSpeed: '再生速度',
     advancedControls: 'その他の設定',
+    bitPerfect: {
+      title: 'Bit-Perfect',
+      exclusive: 'WASAPI 排他モード',
+      shared: 'WASAPI 共有モード',
+      sharedFallback: 'WASAPI 共有モード（排他失敗のためダウングレード）',
+      mode: 'モード',
+      device: '出力デバイス',
+      album: 'アルバム',
+      directory: 'ファイルの場所',
+      format: '音声形式',
+      sampleRate: 'サンプルレート',
+      bitDepth: 'ビット深度',
+      channels: 'チャンネル数'
+    },
     intelligenceMode: {
       title: 'インテリジェンスモード',
       needCookieLogin: 'Cookie方式でログインしてからインテリジェンスモードを使用してください',

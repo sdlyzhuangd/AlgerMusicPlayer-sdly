@@ -84,11 +84,82 @@ const loadMetadata = async (
 };
 
 /**
+ * 将 local:// URL 解码回本地文件绝对路径
+ * 与主进程 fileManager / MusicHook 的解析保持一致
+ */
+const localUrlToFilePath = (url: string): string => {
+  let filePath = decodeURIComponent(url.replace('local:///', ''));
+  // 处理 Windows 路径：/C:/... → C:/...
+  if (/^\/[a-zA-Z]:\//.test(filePath)) {
+    filePath = filePath.slice(1);
+  }
+  return filePath;
+};
+
+/**
+ * 尝试走 Bit-Perfect 会话播放本地音乐。
+ * 满足条件（BP 启用 + 本地文件 + 模块可用）时打开会话并播放，
+ * 返回 true 表示已由 BP 接管；false 表示应回退 HTMLAudio 链路。
+ */
+const tryBitPerfectPlay = async (song: SongResult, shouldPlay: boolean): Promise<boolean> => {
+  if (!song.playMusicUrl?.startsWith('local://')) return false;
+  try {
+    const { useBitPerfectStore } = await import('@/store/modules/bitPerfect');
+    const bpStore = useBitPerfectStore();
+    if (!bpStore.mayUseFor(song.playMusicUrl)) return false;
+
+    const filePath = localUrlToFilePath(song.playMusicUrl);
+    const opened = await bpStore.openSession(filePath, true);
+    if (!opened) {
+      console.warn('[playbackController] BP 会话打开失败，回退 HTMLAudio 链路');
+      return false;
+    }
+
+    // CUE 子轨：设置偏移上下文（进度映射 + 结束检测，实现指南 3.2），
+    // 然后 seek 到子轨起点（bpStore.seek 会自动叠加 cueOffset）
+    bpStore.setCueContext(
+      song.cueIndex && song.cueDuration
+        ? { offset: song.cueOffset || 0, duration: song.cueDuration }
+        : null
+    );
+
+    // 恢复播放进度（子轨内时间）
+    let initialPosition = 0;
+    try {
+      const savedProgress = JSON.parse(localStorage.getItem('playProgress') || '{}');
+      if (savedProgress.songId === song.id) {
+        initialPosition = Number(savedProgress.progress) || 0;
+      }
+    } catch {
+      /* ignore */
+    }
+    if (song.cueIndex || initialPosition > 0) {
+      await bpStore.seek(initialPosition);
+    }
+
+    if (shouldPlay) {
+      await bpStore.play();
+    }
+    bpStore.startPolling();
+    console.log(`[playbackController] Bit-Perfect 播放: ${song.name}`);
+    return true;
+  } catch (error) {
+    console.warn('[playbackController] BP 播放异常，回退 HTMLAudio 链路:', error);
+    return false;
+  }
+};
+
+/**
  * 加载并播放音频
  */
 const loadAndPlayAudio = async (song: SongResult, shouldPlay: boolean): Promise<boolean> => {
   if (!song.playMusicUrl) {
     throw new Error('歌曲没有播放URL');
+  }
+
+  // Bit-Perfect 分流：本地音乐 + BP 启用时走原生 WASAPI 会话
+  if (await tryBitPerfectPlay(song, shouldPlay)) {
+    return true;
   }
 
   // 检查保存的进度

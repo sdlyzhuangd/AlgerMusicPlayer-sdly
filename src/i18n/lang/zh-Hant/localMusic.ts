@@ -5,10 +5,13 @@ export default {
   scanning: '正在掃描...',
   scanComplete: '掃描完成',
   playAll: '播放全部',
+  playAlbum: '播放專輯',
+  cueAlbum: 'CUE 專輯',
   search: '搜尋本地音樂',
   emptyState: '暫無本地音樂，請先選擇資料夾進行掃描',
   fileNotFound: '檔案不存在或已被移動',
   rescan: '重新掃描',
+  clearAndRescan: '清除重新掃描',
   songCount: '{count} 首歌曲',
   removeFromLibrary: '從本機清單移除',
   removedFromLibrary: '已從本機清單移除（不刪除檔案）'

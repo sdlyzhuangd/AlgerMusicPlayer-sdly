@@ -56,6 +56,10 @@
               >
               <span v-if="index < artists.length - 1"> / </span>
             </template>
+            <template v-if="showAlbum && albumName">
+              <span class="mx-1 opacity-60">·</span>
+              <span>{{ albumName }}</span>
+            </template>
           </n-ellipsis>
         </div>
       </div>
@@ -115,6 +119,7 @@ const props = withDefaults(
     canRemove?: boolean;
     isNext?: boolean;
     index?: number;
+    showAlbum?: boolean;
   }>(),
   {
     favorite: true,
@@ -122,9 +127,12 @@ const props = withDefaults(
     selected: false,
     canRemove: false,
     isNext: false,
-    index: undefined
+    index: undefined,
+    showAlbum: false
   }
 );
+
+const albumName = computed(() => props.item.al?.name || '');
 
 const emit = defineEmits(['play', 'select', 'remove-song']);
 const baseItem = ref<InstanceType<typeof BaseSongItem>>();

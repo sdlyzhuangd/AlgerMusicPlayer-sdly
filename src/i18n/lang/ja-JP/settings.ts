@@ -91,7 +91,31 @@ export default {
     audioDeviceDesc: 'スピーカー、ヘッドホン、Bluetoothデバイスなどの出力先を選択',
     testAudio: 'テスト',
     selectAudioDevice: '出力デバイスを選択',
-    showStatusBar: 'ステータスバーコントロール機能を表示するかどうか',
+
+    // Bit-Perfect 排他出力
+    bitPerfect: {
+      title: 'Bit-Perfect 排他出力',
+      desc: 'ローカル音楽をWASAPI排他モードで出力し、システムミキシングとリサンプリングを回避してロスレス出力（Windowsのみ）',
+      unsupported: 'この環境ではサポートされていません（Windowsとネイティブモジュールが必要）',
+      enabledHint: '有効：ローカル音楽は排他出力になり、再生中の音量/EQ/倍速は無効です',
+      device: '排他出力デバイス',
+      deviceDesc: '排他出力に使用するオーディオデバイスを選択',
+      defaultDevice: 'システムの既定デバイス',
+      sessionActive: 'Bit-Perfect セッション実行中',
+      idleHint: '有効にするとローカル音楽再生時に自動適用；現在アクティブなセッションはありません',
+      mode: {
+        exclusive: '排他モード',
+        shared: '共有フォールバック'
+      },
+      fields: {
+        device: 'デバイス',
+        sampleRate: 'サンプルレート',
+        format: 'ビット深度',
+        channels: 'チャンネル'
+      },
+      mono: 'モノラル'
+    },
+    showStatusBar: 'ステータスバーの表示',
     showStatusBarContent:
       'Macのステータスバーに音楽コントロール機能を表示できます（再起動後に有効）',
     fallbackParser: '代替解析サービス (GD音楽台)',

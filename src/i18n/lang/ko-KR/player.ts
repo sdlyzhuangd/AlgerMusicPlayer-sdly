@@ -75,6 +75,20 @@ export default {
     miniPlayBar: '미니 재생바',
     playbackSpeed: '재생 속도',
     advancedControls: '고급 설정',
+    bitPerfect: {
+      title: 'Bit-Perfect',
+      exclusive: 'WASAPI 전용 모드',
+      shared: 'WASAPI 공유 모드',
+      sharedFallback: 'WASAPI 공유 모드 (전용 실패로 다운그레이드)',
+      mode: '모드',
+      device: '출력 장치',
+      album: '앨범',
+      directory: '파일 디렉터리',
+      format: '오디오 형식',
+      sampleRate: '샘플레이트',
+      bitDepth: '비트 심도',
+      channels: '채널 수'
+    },
     intelligenceMode: {
       title: '인텔리전스 모드',
       needCookieLogin: '쿠키 방식으로 로그인한 후 인텔리전스 모드를 사용할 수 있습니다',

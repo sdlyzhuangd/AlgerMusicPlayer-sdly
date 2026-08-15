@@ -54,7 +54,9 @@ export function buildFallbackMeta(filePath: string): LocalMusicMeta {
     coverPath: null,
     lyrics: null,
     fileSize: 0,
-    modifiedTime: 0
+    modifiedTime: 0,
+    sampleRate: 0,
+    bitsPerSample: 0
   };
 }
 
@@ -190,6 +192,14 @@ export function toSongResult(entry: LocalMusicEntry): SongResult {
     dt: entry.duration,
     source: 'netease' as const,
     count: 0,
+    // 本地文件音质信息：BP 状态徽章与播放分流使用（无损/未压缩格式有效）
+    sampleRate: entry.sampleRate,
+    bitsPerSample: entry.bitsPerSample,
+    // CUE 子轨信息：播放时 seek 到 cueOffset、在 cueOffset+cueDuration 处切歌
+    cueFrom: entry.cueFrom,
+    cueIndex: entry.cueIndex,
+    cueOffset: entry.cueOffset,
+    cueDuration: entry.cueDuration,
     // 内嵌歌词（如果有）
     lyric: lyric ?? undefined,
     // 本地音乐 URL 不会过期，设置一个极大的过期时间
@@ -214,9 +224,104 @@ export function filterByKeyword(list: LocalMusicEntry[], keyword: string): Local
   return list.filter((entry) => {
     return (
       entry.title.toLowerCase().includes(lowerKeyword) ||
-      entry.artist.toLowerCase().includes(lowerKeyword)
+      entry.artist.toLowerCase().includes(lowerKeyword) ||
+      entry.album.toLowerCase().includes(lowerKeyword)
     );
   });
+}
+
+// ==================== CUE 分轨路径/可见性工具 ====================
+
+/** 取路径所在目录（兼容 / 与 \ 分隔符） */
+export function dirnameOfPath(p: string): string {
+  const sep = p.includes('\\') ? '\\' : '/';
+  const idx = p.lastIndexOf(sep);
+  return idx > 0 ? p.slice(0, idx) : '';
+}
+
+/**
+ * 解析 CUE 引用的音频文件为绝对路径
+ * 绝对路径原样返回；相对路径基于 CUE 文件所在目录拼接
+ * @param cueDir CUE 文件所在目录
+ * @param audioFile FILE 行声明的文件名
+ * @returns 绝对路径，空输入返回 ''
+ */
+export function resolveCueAudioPath(cueDir: string, audioFile: string): string {
+  const f = (audioFile || '').trim();
+  if (!f) return '';
+  if (/^[a-zA-Z]:[\\/]/.test(f) || f.startsWith('/') || f.startsWith('\\')) return f;
+  const sep = cueDir.includes('\\') ? '\\' : '/';
+  return cueDir ? `${cueDir}${sep}${f.replace(/[\\/]/g, sep)}` : f;
+}
+
+/**
+ * 在目录文件列表中按“文件名包含标题”匹配旁挂 .lrc 歌词
+ * 精确同名（去扩展名、不区分大小写）优先；否则取包含标题的最短文件名，
+ * 避免“xxx合集.lrc”这类泛化文件名误命中。
+ * 包含匹配要求标题至少 2 个字符，防止“爱/梦”这类单字标题误伤大量文件。
+ * @param names 目录下的文件名列表（含扩展名）
+ * @param title 歌曲标题
+ * @returns 匹配到的文件名（含 .lrc 扩展名），无匹配返回 null
+ */
+export function matchSidecarLrcByName(names: string[], title: string): string | null {
+  const t = (title || '').trim().toLowerCase();
+  if (!t) return null;
+  const lrcNames = names.filter((n) => n.toLowerCase().endsWith('.lrc'));
+  if (lrcNames.length === 0) return null;
+  // 1. 精确同名优先（去扩展名后相等）
+  const exact = lrcNames.find((n) => n.slice(0, -4).toLowerCase() === t);
+  if (exact) return exact;
+  // 2. 包含匹配：取包含标题的最短文件名（同长时按字典序，保证选择确定性）
+  const containing = lrcNames
+    .filter((n) => n.slice(0, -4).toLowerCase().includes(t) && t.length >= 2)
+    .sort((a, b) => a.length - b.length || a.localeCompare(b));
+  return containing.length > 0 ? containing[0] : null;
+}
+
+/**
+ * 播放时兜底：在音频文件所在目录查找旁挂 .lrc 歌词（文件名包含标题）
+ * 列表出目录后用 matchSidecarLrcByName 匹配，返回完整路径
+ * @param filePath 音频文件绝对路径
+ * @param title 歌曲标题
+ * @returns 匹配到的 .lrc 文件完整路径，未找到或读取失败返回 null
+ */
+export async function findSidecarLyricPath(
+  filePath: string,
+  title: string
+): Promise<string | null> {
+  const dir = dirnameOfPath(filePath);
+  if (!dir) return null;
+  try {
+    const names = await window.api.listLocalDirectory(dir);
+    const matched = matchSidecarLrcByName(names, title);
+    if (!matched) return null;
+    return resolveCueAudioPath(dir, matched);
+  } catch (error) {
+    console.error(`查找旁挂歌词失败: ${filePath}`, error);
+    return null;
+  }
+}
+
+/** CUE 文件名（去扩展名），CUE 无专辑标题时用作专辑名兜底 */
+export function cueFileBaseName(cueFilePath: string): string {
+  const sep = cueFilePath.includes('\\') ? '\\' : '/';
+  const base = cueFilePath.split(sep).pop() || cueFilePath;
+  const dot = base.lastIndexOf('.');
+  return dot > 0 ? base.slice(0, dot) : base;
+}
+
+/**
+ * 可见性过滤：被 CUE 引用的音频文件不单独展示（实现指南 7.6 去重）
+ * 音频文件本身仍保留在 IndexedDB 中，作为 CUE 子轨的封面/音质元数据来源
+ * @param entries 全部缓存条目
+ * @returns 应展示的条目（去掉被 CUE 覆盖的独立音频文件）
+ */
+export function filterCueCoveredEntries(entries: LocalMusicEntry[]): LocalMusicEntry[] {
+  const covered = new Set(
+    entries.filter((e) => e.cueIndex && e.cueFrom).map((e) => e.cueFrom as string)
+  );
+  if (covered.size === 0) return entries;
+  return entries.filter((e) => (e.cueIndex ? true : !covered.has(e.filePath)));
 }
 
 /**

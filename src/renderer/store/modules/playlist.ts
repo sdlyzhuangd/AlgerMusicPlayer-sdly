@@ -650,6 +650,17 @@ export const usePlaylistStore = defineStore(
           playerCore.playMusic.id === song.id &&
           playerCore.playMusic.playMusicUrl === song.playMusicUrl
         ) {
+          // Bit-Perfect 会话激活时，播放/暂停直接走原生会话
+          try {
+            const { useBitPerfectStore } = await import('@/store/modules/bitPerfect');
+            if (useBitPerfectStore().isActive()) {
+              await playerCore.togglePlay();
+              return;
+            }
+          } catch {
+            /* BP store 不可用则走常规链路 */
+          }
+
           if (playerCore.play) {
             playerCore.setPlayMusic(false);
             const { audioService } = await import('@/services/audioService');

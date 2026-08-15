@@ -7,6 +7,10 @@ import type { usePlayerStore } from '@/store';
 import type { Artist, ILyricText, SongResult } from '@/types/music';
 import { isElectron } from '@/utils';
 import { getTextColors } from '@/utils/linearColor';
+import {
+  extractTitleFromFilename,
+  findSidecarLyricPath
+} from '@/utils/localMusicUtils';
 import { parseLyrics } from '@/utils/yrcParser';
 
 const windowData = window as any;
@@ -178,7 +182,14 @@ const ensureLyricsLoaded = async (force = false) => {
     if (playMusic.value.lyric && typeof playMusic.value.lyric === 'object') {
       playMusic.value.lyric.hasWordByWord = hasWordByWord;
     }
-  } else if (lyricData && typeof lyricData === 'object' && lyricData.lrcArray?.length > 0) {
+  } else if (
+    lyricData &&
+    typeof lyricData === 'object' &&
+    lyricData.lrcArray?.length > 0 &&
+    // 纯文本歌词（全行 startTime = -1，如 FLAC 内嵌 lyrics 的 text 字段丢失时间戳）
+    // 不当作可用歌词：交给下方 local:// 分支现场重读带时间戳版本，保证自动滚动
+    lyricData.lrcArray.some((l: any) => l.startTime !== -1)
+  ) {
     const rawLrc = lyricData.lrcArray || [];
     lrcTimeArray.value = lyricData.lrcTimeArray || [];
 
@@ -196,19 +207,53 @@ const ensureLyricsLoaded = async (force = false) => {
       if (/^\/[a-zA-Z]:\//.test(filePath)) {
         filePath = filePath.slice(1);
       }
+      // 内嵌歌词（downloadManager 读取原生 vorbis LYRICS 标签，通常带时间戳）
       const embeddedLyrics = await window.api.getEmbeddedLyrics(filePath);
-      if (embeddedLyrics) {
+
+      // 旁挂 .lrc 歌词：同目录文件名包含歌曲标题即匹配（如“姚璎格 - 祝福.lrc”匹配“祝福”），
+      // 标题缺失时退回文件名
+      let sidecarText: string | null = null;
+      try {
+        const songTitle =
+          playMusic.value.name ||
+          playMusic.value.song?.name ||
+          extractTitleFromFilename(filePath);
+        const sidecarPath = await findSidecarLyricPath(filePath, songTitle);
+        if (sidecarPath) {
+          sidecarText = await window.api.readLocalTextFile(sidecarPath);
+        }
+      } catch (sidecarErr) {
+        console.error('Sidecar lyrics fallback failed:', sidecarErr);
+      }
+
+      // 带时间戳的版本优先（保证自动滚动）；内嵌无时间戳时旁挂可覆盖；
+      // 两者都没有时间戳时退回内嵌纯文本。
+      // 正则与 yrcParser 的 LRC_TIME_PATTERN（[MM:SS.xx]）保持一致，避免误判
+      const hasTime = (text: string | null) =>
+        /\[\d{2}:\d{2}\.\d{2,3}\]/.test(text || '');
+      const embeddedHasTime = hasTime(embeddedLyrics);
+      const sidecarHasTime = hasTime(sidecarText);
+
+      let chosen: string | null = null;
+      if (sidecarHasTime) chosen = sidecarText;
+      else if (embeddedHasTime) chosen = embeddedLyrics;
+      else if (embeddedLyrics) chosen = embeddedLyrics;
+      else if (sidecarText) chosen = sidecarText;
+
+      if (chosen) {
         const {
           lrcArray: parsedLrcArray,
           lrcTimeArray: parsedTimeArray,
           hasWordByWord
-        } = await parseLyricsString(embeddedLyrics);
+        } = await parseLyricsString(chosen);
         lrcArray.value = parsedLrcArray;
         lrcTimeArray.value = parsedTimeArray;
         if (playMusic.value.lyric && typeof playMusic.value.lyric === 'object') {
           (playMusic.value.lyric as any).hasWordByWord = hasWordByWord;
         }
-      } else if (typeof songId === 'number') {
+      }
+
+      if (lrcArray.value.length === 0 && typeof songId === 'number') {
         try {
           const { getMusicLrc } = await import('@/api/music');
           const res = await getMusicLrc(songId);
@@ -313,26 +358,23 @@ const setupAudioListeners = () => {
     clearInterval();
     interval = window.setInterval(() => {
       try {
-        // 每次从 audioService 获取最新的 sound 引用，而不是依赖闭包中的 sound.value
         const currentSound = audioService.getCurrentSound();
         if (!currentSound) {
-          // sound 暂时为空（可能在切歌/重建中），不清除 interval，等待恢复
           return;
         }
 
         const currentTime = currentSound.currentTime;
         if (typeof currentTime !== 'number' || Number.isNaN(currentTime)) {
-          // 无效时间，跳过本次更新
           return;
         }
 
-        // 同步 sound.value 引用（确保外部也能拿到最新的）
         if (sound.value !== currentSound) {
           sound.value = currentSound;
         }
 
-        nowTime.value = currentTime;
-        allTime.value = currentSound.duration;
+        // CUE 子轨：显示子轨内时间与子轨时长（实现指南 3.3）
+        nowTime.value = audioService.getDisplayPosition();
+        allTime.value = audioService.getDisplayDuration();
 
         // === 歌词索引更新 ===
         const newIndex = getLrcIndex(nowTime.value);
@@ -350,10 +392,10 @@ const setupAudioListeners = () => {
           }
         }
 
-        // === 逐字歌词行内进度 ===
+        // === 逐字歌词行内进度（用子轨内时间，保证 CUE 子轨歌词同步） ===
         const { start, end } = currentLrcTiming.value;
         if (typeof start === 'number' && typeof end === 'number' && start !== end) {
-          const elapsed = currentTime - start;
+          const elapsed = nowTime.value - start;
           const duration = end - start;
           const progress = (elapsed / duration) * 100;
           currentLrcProgress.value = Math.min(Math.max(progress, 0), 100);
@@ -376,18 +418,18 @@ const setupAudioListeners = () => {
           }
         }
 
-        // === localStorage 进度保存（每 ~2 秒）===
+        // === localStorage 进度保存（每 ~2 秒，存子轨内时间）===
         if (
-          Math.floor(currentTime) % 2 === 0 &&
-          Math.floor(currentTime) !== Math.floor(lastSavedProgress)
+          Math.floor(nowTime.value) % 2 === 0 &&
+          Math.floor(nowTime.value) !== Math.floor(lastSavedProgress)
         ) {
-          lastSavedProgress = currentTime;
+          lastSavedProgress = nowTime.value;
           if (getPlayerStore().playMusic?.id) {
             localStorage.setItem(
               'playProgress',
               JSON.stringify({
                 songId: getPlayerStore().playMusic.id,
-                progress: currentTime
+                progress: nowTime.value
               })
             );
           }
@@ -396,7 +438,7 @@ const setupAudioListeners = () => {
         // === MPRIS 进度更新（每 ~1 秒）===
         if (isElectron && lyricThrottleCounter % 20 === 0) {
           try {
-            window.electron.ipcRenderer.send('mpris-position-update', currentTime);
+            window.electron.ipcRenderer.send('mpris-position-update', nowTime.value);
           } catch {
             // 忽略发送失败
           }
@@ -444,8 +486,8 @@ const setupAudioListeners = () => {
     try {
       const currentSound = audioService.getCurrentSound();
       if (currentSound) {
-        // 立即更新显示时间，不进行任何检查
-        const currentTime = currentSound.currentTime;
+        // 立即更新显示时间（CUE 子轨映射为子轨内时间）
+        const currentTime = audioService.getDisplayPosition();
         if (typeof currentTime === 'number' && !Number.isNaN(currentTime)) {
           nowTime.value = currentTime;
 
@@ -474,11 +516,11 @@ const setupAudioListeners = () => {
     const currentSound = audioService.getCurrentSound();
     if (currentSound) {
       try {
-        // 更新当前时间和总时长
-        const currentTime = currentSound.currentTime;
+        // 更新当前时间和总时长（CUE 子轨映射为子轨内时间/时长）
+        const currentTime = audioService.getDisplayPosition();
         if (typeof currentTime === 'number' && !Number.isNaN(currentTime)) {
           nowTime.value = currentTime;
-          allTime.value = currentSound.duration;
+          allTime.value = audioService.getDisplayDuration();
         }
       } catch (error) {
         console.error('初始化时间和进度失败:', error);
@@ -576,8 +618,8 @@ export const pause = () => {
   const currentSound = audioService.getCurrentSound();
   if (currentSound) {
     try {
-      // 保存当前播放进度
-      const currentTime = currentSound.currentTime;
+      // 保存当前播放进度（CUE 子轨存子轨内时间）
+      const currentTime = audioService.getDisplayPosition();
       if (getPlayerStore().playMusic && getPlayerStore().playMusic.id) {
         localStorage.setItem(
           'playProgress',
@@ -663,19 +705,16 @@ export const isCurrentLrc = (index: number, time: number): boolean => {
 export const getLrcIndex = (time: number): number => {
   const correctedTime = time + correctionTime.value;
 
-  // 如果歌词数组为空，返回当前索引
   if (lrcTimeArray.value.length === 0) {
     return nowIndex.value;
   }
 
-  // 处理最后一句歌词的情况
   const lastIndex = lrcTimeArray.value.length - 1;
   if (correctedTime >= lrcTimeArray.value[lastIndex]) {
     nowIndex.value = lastIndex;
     return lastIndex;
   }
 
-  // 查找当前时间对应的歌词索引
   for (let i = 0; i < lrcTimeArray.value.length - 1; i++) {
     const currentTime = lrcTimeArray.value[i];
     const nextTime = lrcTimeArray.value[i + 1];
@@ -1064,7 +1103,7 @@ const handleAudioReady = ((event: CustomEvent) => {
 
       const currentSound = audioService.getCurrentSound();
       if (currentSound) {
-        const currentPosition = currentSound.currentTime;
+        const currentPosition = audioService.getDisplayPosition();
         if (typeof currentPosition === 'number' && !Number.isNaN(currentPosition)) {
           nowTime.value = currentPosition;
         }
