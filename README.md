@@ -1,11 +1,20 @@
 ## 本项目仅在原作者项目上，深度增加了如下功能和说明：
 
-- 原生C++支持Bit-Perfect,WASAPI独占支持。
+- 原生C++支持Bit-Perfect,WASAPI独占支持。**C++ 原生插件**：用 miniaudio 库操作 WASAPI Exclusive，解码音频文件，直接输出到 DAC
+
 - CUE专辑和普通专辑（非cue）的支持，并分组
+
 - 歌词的优化和同步滚动显示
+
+- 增加扫描本地音乐清除功能
+
 - 为外置DAC播放器特别定制。  由于安卓系统支持原生输出的项目较多，赞无修改安卓支持的计划。
+
 - 本修改者**公众号sdlyzhuangd**。内有关于达菲（Daphile）数播的优秀插件及配套控制程序，带给你不一样的体验。
+
 - 请支持原作者。一起权益均归原作者所有。
+
+  
 
 <h2 align="center">🎵 Alger Music Player</h2>
 <div align="center">

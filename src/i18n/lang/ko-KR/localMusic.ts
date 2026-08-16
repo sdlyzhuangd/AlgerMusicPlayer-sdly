@@ -14,5 +14,8 @@ export default {
   clearAndRescan: '초기화 후 다시 스캔',
   songCount: '{count}곡',
   removeFromLibrary: '라이브러리에서 제거',
-  removedFromLibrary: '라이브러리에서 제거했습니다 (파일은 삭제되지 않음)'
+  removedFromLibrary: '라이브러리에서 제거했습니다 (파일은 삭제되지 않음)',
+  scanTip: '음악 파일 스캔',
+  addFolderTip: '폴더 추가',
+  folderManagerTip: '폴더 관리'
 };

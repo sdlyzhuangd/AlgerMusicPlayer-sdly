@@ -71,33 +71,47 @@
 
               <!-- 扫描按钮（下拉菜单：增量扫描 / 清除重新扫描） -->
               <n-dropdown :options="scanDropdownOptions" @select="handleScanSelect">
-                <button
-                  class="action-btn-icon w-10 h-10 rounded-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all"
-                  :disabled="localMusicStore.scanning"
-                >
-                  <i
-                    class="ri-refresh-line text-lg"
-                    :class="{ 'animate-spin': localMusicStore.scanning }"
-                  />
-                </button>
+                <n-tooltip trigger="hover" :z-index="99999">
+                  <template #trigger>
+                    <button
+                      class="action-btn-icon w-10 h-10 rounded-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all"
+                      :disabled="localMusicStore.scanning"
+                    >
+                      <i
+                        class="ri-refresh-line text-lg"
+                        :class="{ 'animate-spin': localMusicStore.scanning }"
+                      />
+                    </button>
+                  </template>
+                  {{ t('localMusic.scanTip') }}
+                </n-tooltip>
               </n-dropdown>
 
               <!-- 添加文件夹按钮 -->
-              <button
-                class="action-btn-icon w-10 h-10 rounded-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all"
-                @click="handleAddFolder"
-              >
-                <i class="ri-folder-add-line text-lg" />
-              </button>
+              <n-tooltip trigger="hover" :z-index="99999">
+                <template #trigger>
+                  <button
+                    class="action-btn-icon w-10 h-10 rounded-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all"
+                    @click="handleAddFolder"
+                  >
+                    <i class="ri-folder-add-line text-lg" />
+                  </button>
+                </template>
+                {{ t('localMusic.addFolderTip') }}
+              </n-tooltip>
 
               <!-- 文件夹管理按钮 -->
-              <button
-                v-if="localMusicStore.folderPaths.length > 0"
-                class="action-btn-icon w-10 h-10 rounded-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all"
-                @click="showFolderManager = true"
-              >
-                <i class="ri-folder-settings-line text-lg" />
-              </button>
+              <n-tooltip v-if="localMusicStore.folderPaths.length > 0" trigger="hover" :z-index="99999">
+                <template #trigger>
+                  <button
+                    class="action-btn-icon w-10 h-10 rounded-full flex items-center justify-center bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all"
+                    @click="showFolderManager = true"
+                  >
+                    <i class="ri-folder-settings-line text-lg" />
+                  </button>
+                </template>
+                {{ t('localMusic.folderManagerTip') }}
+              </n-tooltip>
             </div>
           </div>
         </section>

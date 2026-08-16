@@ -48,7 +48,7 @@ export function initializeMpris(mainWindowRef: BrowserWindow) {
 
   try {
     mprisPlayer = Player({
-      name: 'AlgerMusicPlayer',
+      name: 'AlgerMusicPlayer-sdly',
       identity: 'Alger Music Player',
       supportedUriSchemes: ['file', 'http', 'https'],
       supportedMimeTypes: [

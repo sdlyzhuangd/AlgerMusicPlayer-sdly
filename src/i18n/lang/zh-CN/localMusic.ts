@@ -14,5 +14,8 @@ export default {
   clearAndRescan: '清除重新扫描',
   songCount: '{count} 首歌曲',
   removeFromLibrary: '从本地列表移除',
-  removedFromLibrary: '已从本地列表移除（不删除文件）'
+  removedFromLibrary: '已从本地列表移除（不删除文件）',
+  scanTip: '扫描音乐文件',
+  addFolderTip: '添加文件夹',
+  folderManagerTip: '文件夹管理'
 };

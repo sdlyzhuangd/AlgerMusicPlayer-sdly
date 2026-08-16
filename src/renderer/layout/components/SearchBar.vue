@@ -458,9 +458,9 @@ watchEffect(() => {
 
 const restartApp = () => window.electron.ipcRenderer.send('restart');
 const toLogin = () => router.push('/user');
-const toGithub = () => window.open('http://donate.alger.fun/download', '_blank');
+const toGithub = () => window.open('https://github.com/sdlyzhuangd/AlgerMusicPlayer-sdly/releases', '_blank');
 const toGithubRelease = () => {
-  window.location.href = 'https://donate.alger.fun/download';
+  window.location.href = 'https://github.com/sdlyzhuangd/AlgerMusicPlayer-sdly/releases';
 };
 
 const isDark = computed({

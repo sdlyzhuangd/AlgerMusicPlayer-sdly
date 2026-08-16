@@ -119,6 +119,11 @@
             </div>
           </div>
         </n-tooltip>
+        <!-- 非 BP 音频信息徽章 -->
+        <span v-if="audioInfoVisible" class="audio-info-badge">
+          <i class="ri-music-2-line"></i>
+          <span v-if="audioInfoSpecs" class="audio-info-specs">{{ audioInfoSpecs }}</span>
+        </span>
       </div>
       <div class="music-content-name">
         <n-ellipsis
@@ -262,7 +267,7 @@ import { useFavorite } from '@/hooks/useFavorite';
 import { usePlaybackControl } from '@/hooks/usePlaybackControl';
 import { usePlayMode } from '@/hooks/usePlayMode';
 import { useVolumeControl } from '@/hooks/useVolumeControl';
-import { audioService } from '@/services/audioService';
+import { audioService, type DecodedAudioInfo } from '@/services/audioService';
 import { useBitPerfectStore } from '@/store/modules/bitPerfect';
 import { usePlayerStore } from '@/store/modules/player';
 import { useSettingsStore } from '@/store/modules/settings';
@@ -395,6 +400,51 @@ const bpDirectory = computed(() => {
 
 /** tooltip：输出设备 */
 const bpTipDevice = computed(() => bpStore.session.deviceName || '');
+
+// ==================== 非 BP 音频信息 ====================
+
+const decodedAudioInfo = ref<DecodedAudioInfo>({ sampleRate: 0, channels: 0, format: '' });
+
+audioService.on('audio-info', (info: DecodedAudioInfo) => {
+  decodedAudioInfo.value = { ...info };
+});
+
+watch(() => playMusic.value?.id, () => {
+  decodedAudioInfo.value = { sampleRate: 0, channels: 0, format: '' };
+});
+
+/** 非 BP 音频信息是否可显示 */
+const audioInfoVisible = computed(() => {
+  if (bpBadgeVisible.value) return false;
+  if (!playMusic.value?.id) return false;
+  return !!decodedAudioInfo.value.format || !!decodedAudioInfo.value.sampleRate;
+});
+
+const audioInfoFormat = computed(() => decodedAudioInfo.value.format || '');
+
+const audioInfoSampleRate = computed(() => {
+  const rate = playMusic.value?.sampleRate || decodedAudioInfo.value.sampleRate || 0;
+  if (!rate) return '';
+  const khz = rate / 1000;
+  return `${khz % 1 === 0 ? khz.toFixed(0) : khz.toFixed(1)} kHz`;
+});
+
+const audioInfoBitDepth = computed(() => {
+  const bits = playMusic.value?.bitsPerSample || 0;
+  if (bits) return `${bits} bit`;
+  return decodedAudioInfo.value.sampleRate ? '16bit+' : '';
+});
+
+const audioInfoChannels = computed(() => {
+  const ch = decodedAudioInfo.value.channels;
+  return ch ? `${ch} ch` : '';
+});
+
+const audioInfoSpecs = computed(() =>
+  [audioInfoFormat.value, audioInfoSampleRate.value, audioInfoBitDepth.value, audioInfoChannels.value]
+    .filter(Boolean)
+    .join(' · ')
+);
 
 // 播放控制
 const { isPlaying: play, playMusicEvent, handleNext, handlePrev } = usePlaybackControl();
@@ -901,5 +951,25 @@ const openPlayListDrawer = () => {
   50% {
     text-shadow: 0 0 9px rgba(245, 197, 24, 0.95);
   }
+}
+
+.audio-info-badge {
+  @apply ml-2 px-1.5 h-[18px] flex items-center gap-1 rounded text-[11px] font-medium;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: default;
+  background: rgba(100, 160, 255, 0.12);
+  border: 1px solid rgba(100, 160, 255, 0.3);
+  color: #6ea8fe;
+
+  i {
+    font-size: 11px;
+    line-height: 1;
+  }
+}
+
+.audio-info-specs {
+  font-weight: 400;
+  opacity: 0.85;
 }
 </style>

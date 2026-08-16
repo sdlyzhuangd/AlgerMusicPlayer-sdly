@@ -14,5 +14,8 @@ export default {
   clearAndRescan: '清除重新掃描',
   songCount: '{count} 首歌曲',
   removeFromLibrary: '從本機清單移除',
-  removedFromLibrary: '已從本機清單移除（不刪除檔案）'
+  removedFromLibrary: '已從本機清單移除（不刪除檔案）',
+  scanTip: '掃描音樂檔案',
+  addFolderTip: '新增資料夾',
+  folderManagerTip: '資料夾管理'
 };

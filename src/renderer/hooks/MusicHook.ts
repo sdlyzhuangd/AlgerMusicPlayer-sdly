@@ -321,6 +321,18 @@ const setupMusicWatchers = () => {
       }
     }
   );
+
+  // 本地音乐 playMusicUrl 异步到达时（首次播放时 id watcher 先触发但 URL 尚未就绪）
+  // 歌词仍为空，需在 URL 到位后重新加载
+  watch(
+    () => playMusic.value?.playMusicUrl,
+    (newUrl, oldUrl) => {
+      if (!playMusic.value?.id) return;
+      if (newUrl && newUrl !== oldUrl && lrcArray.value.length === 0) {
+        ensureLyricsLoaded(true);
+      }
+    }
+  );
 };
 
 const setupAudioListeners = () => {
@@ -867,7 +879,7 @@ const sendTrayLyric = (index: number) => {
     const lrcObj = JSON.stringify({
       content: lyric.text || '',
       time: duration.toFixed(1),
-      sender: 'AlgerMusicPlayer'
+      sender: 'AlgerMusicPlayer-sdly'
     });
 
     window.electron.ipcRenderer.send('tray-lyric-update', lrcObj);

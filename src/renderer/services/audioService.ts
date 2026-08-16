@@ -2,6 +2,12 @@ import type { AudioOutputDevice } from '@/types/audio';
 import type { SongResult } from '@/types/music';
 import { getImgUrl, isElectron } from '@/utils';
 
+export type DecodedAudioInfo = {
+  sampleRate: number;
+  channels: number;
+  format: string;
+};
+
 class AudioService {
   private audio: HTMLAudioElement;
   private currentTrack: SongResult | null = null;
@@ -26,6 +32,9 @@ class AudioService {
 
   // CUE 子轨结束已处理标志（防 timeupdate 重复触发 / 与原生 ended 双切歌）
   private cueEndHandled = false;
+
+  // 当前解码音频信息（非 BP 模式下从 AudioContext / audio 元素获取）
+  private decodedAudioInfo: DecodedAudioInfo = { sampleRate: 0, channels: 0, format: '' };
 
   private readonly frequencies = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
@@ -481,6 +490,8 @@ class AudioService {
           cleanup();
           this._isLoading = false;
 
+          this.detectAudioInfo(url);
+
           // CUE 子轨：定位到 cueOffset（+恢复进度），而非文件开头（实现指南 4）
           const abs = this.toAbsoluteTime(track, seekTime);
           if (abs > 0) {
@@ -570,14 +581,17 @@ class AudioService {
     }
   }
 
-  public stop() {
+  public async stop() {
     this.forceResetOperationLock();
     // Bit-Perfect 会话激活时同步关闭原生会话（切歌/停止时释放 WASAPI 设备，
     // 避免 BP 歌曲切到非 BP 歌曲后原生会话仍在播放造成双路出声）
     if (this.isBpActive()) {
-      void import('@/store/modules/bitPerfect').then(({ useBitPerfectStore }) =>
-        useBitPerfectStore().closeSession()
-      );
+      try {
+        const { useBitPerfectStore } = await import('@/store/modules/bitPerfect');
+        await useBitPerfectStore().closeSession();
+      } catch (e) {
+        console.warn('[audioService] 关闭 BP 会话失败:', e);
+      }
     }
     // 移除尚未结算的加载监听器，避免 stop 后旧的 canplay/error 仍触发过期回调
     if (this.pendingLoadCleanup) {
@@ -592,6 +606,7 @@ class AudioService {
       console.error('停止音频失败:', error);
     }
     this.currentTrack = null;
+    this.decodedAudioInfo = { sampleRate: 0, channels: 0, format: '' };
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'none';
     }
@@ -677,7 +692,6 @@ class AudioService {
       this.gainNode.gain.cancelScheduledValues(this.context.currentTime);
       this.gainNode.gain.setValueAtTime(normalizedVolume, this.context.currentTime);
     } else {
-      // Fallback: direct volume (no Web Audio context)
       this.audio.volume = normalizedVolume;
     }
 
@@ -698,6 +712,10 @@ class AudioService {
 
   getCurrentSound(): HTMLAudioElement | null {
     return this.audio.src ? this.audio : null;
+  }
+
+  getDecodedAudioInfo(): DecodedAudioInfo {
+    return this.decodedAudioInfo;
   }
 
   getCurrentTrack(): SongResult | null {
@@ -793,6 +811,65 @@ class AudioService {
         this.emit('audio_error', { type: 'context_closed' });
       }
     });
+  }
+
+  private detectAudioInfo(url: string) {
+    const info: DecodedAudioInfo = { sampleRate: 0, channels: 0, format: '' };
+
+    info.channels = 2;
+
+    if (url) {
+      try {
+        const u = new URL(url, location.href);
+        const pathname = u.pathname || '';
+        const ext = pathname.slice(pathname.lastIndexOf('.') + 1).toUpperCase();
+        const formatMap: Record<string, string> = {
+          MP3: 'MP3', M4A: 'AAC', AAC: 'AAC', OGG: 'OGG',
+          FLAC: 'FLAC', WAV: 'WAV', WMA: 'WMA', OPUS: 'Opus', WEBM: 'WebM'
+        };
+        if (formatMap[ext]) {
+          info.format = formatMap[ext];
+        }
+      } catch { /* ignore */ }
+
+      if (!info.format) {
+        const lUrl = url.toLowerCase();
+        if (lUrl.includes('.mp3')) info.format = 'MP3';
+        else if (lUrl.includes('.m4a') || lUrl.includes('.aac')) info.format = 'AAC';
+        else if (lUrl.includes('.ogg')) info.format = 'OGG';
+        else if (lUrl.includes('.flac')) info.format = 'FLAC';
+        else if (lUrl.includes('.wav')) info.format = 'WAV';
+        else if (lUrl.includes('.opus')) info.format = 'Opus';
+        else if (lUrl.includes('.webm')) info.format = 'WebM';
+        else info.format = 'Streaming';
+      }
+    }
+
+    this.decodedAudioInfo = info;
+    this.emit('audio-info', info);
+
+    if (!url || url.startsWith('local://')) return;
+
+    this.detectStreamInfo(url);
+  }
+
+  private async detectStreamInfo(url: string) {
+    try {
+      const ctx = this.context && this.context.state !== 'closed' ? this.context : new AudioContext();
+      const response = await fetch(url, { mode: 'cors' });
+      if (!response.ok) return;
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      const info: DecodedAudioInfo = {
+        sampleRate: audioBuffer.sampleRate,
+        channels: audioBuffer.numberOfChannels,
+        format: this.decodedAudioInfo.format
+      };
+      this.decodedAudioInfo = info;
+      this.emit('audio-info', info);
+    } catch (e) {
+      console.warn('[audioService] detectStreamInfo failed, using fallback:', e);
+    }
   }
 }
 

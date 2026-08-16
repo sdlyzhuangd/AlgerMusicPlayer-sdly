@@ -14,5 +14,8 @@ export default {
   clearAndRescan: 'Clear & Rescan',
   songCount: '{count} songs',
   removeFromLibrary: 'Remove from Library',
-  removedFromLibrary: 'Removed from library (file not deleted)'
+  removedFromLibrary: 'Removed from library (file not deleted)',
+  scanTip: 'Scan music files',
+  addFolderTip: 'Add folder',
+  folderManagerTip: 'Folder manager'
 };

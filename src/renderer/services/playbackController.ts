@@ -216,7 +216,7 @@ const updateDocumentTitle = (music: SongResult): void => {
       ''
     )}`;
   }
-  document.title = 'AlgerMusic - ' + title;
+  document.title = 'AlgerMusic-sdly - ' + title;
 };
 
 // ==================== 导出函数 ====================
@@ -245,8 +245,8 @@ export const playTrack = async (
     SongSourceConfigManager.clearTriedSources(music.id);
   }
 
-  // 2. 停止当前音频
-  audioService.stop();
+  // 2. 停止当前音频（等待 BP 会话关闭完成，避免新会话打开时旧会话仍在占用设备）
+  await audioService.stop();
 
   // 验证 & 激活请求
   if (!playbackRequestManager.isRequestValid(requestId)) {

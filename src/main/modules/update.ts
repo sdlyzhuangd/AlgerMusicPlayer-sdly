@@ -24,9 +24,9 @@ let checkForUpdatesPromise: Promise<AppUpdateState> | null = null;
 let downloadUpdatePromise: Promise<AppUpdateState> | null = null;
 
 const isAutoUpdateSupported = (): boolean => {
-  // if (!app.isPackaged) {
-  //   return false;
-  // }
+  if (!app.isPackaged) {
+    return false;
+  }
 
   if (process.platform === 'linux') {
     return Boolean(process.env.APPIMAGE);

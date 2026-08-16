@@ -14,5 +14,8 @@ export default {
   clearAndRescan: 'クリアして再スキャン',
   songCount: '{count} 曲',
   removeFromLibrary: 'ライブラリから削除',
-  removedFromLibrary: 'ライブラリから削除しました（ファイルは削除されません）'
+  removedFromLibrary: 'ライブラリから削除しました（ファイルは削除されません）',
+  scanTip: '音楽ファイルをスキャン',
+  addFolderTip: 'フォルダを追加',
+  folderManagerTip: 'フォルダ管理'
 };
