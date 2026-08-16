@@ -90,7 +90,7 @@
     "autoprefixer": "^10.4.22",
     "axios": "^1.13.2",
     "cross-env": "^7.0.3",
-    "electron": "^40.1.0",
+    "electron": "^43.4.0",
     "electron-builder": "^26.0.12",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.2",
