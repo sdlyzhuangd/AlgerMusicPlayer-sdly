@@ -48,6 +48,7 @@
       </template>
     </div>
     <update-modal v-if="isElectron" />
+    <expired-modal />
     <playlist-drawer v-model="showPlaylistDrawer" :song-id="currentSongId" />
     <sleep-timer-top v-if="!settingsStore.isMobile" />
     <!-- 播放列表抽屉 -->
@@ -61,6 +62,7 @@ import { useRoute } from 'vue-router';
 
 import PlayBottom from '@/components/common/PlayBottom.vue';
 import UpdateModal from '@/components/common/UpdateModal.vue';
+import ExpiredModal from '@/components/common/ExpiredModal.vue';
 import SleepTimerTop from '@/components/player/SleepTimerTop.vue';
 import homeRouter from '@/router/home';
 import otherRouter from '@/router/other';

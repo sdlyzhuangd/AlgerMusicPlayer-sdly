@@ -15,6 +15,7 @@ import {
 } from '@/utils/theme';
 
 import { type AppUpdateState,createDefaultAppUpdateState } from '../../../shared/appUpdate';
+import { isExpired } from '@/utils/expiryCheck';
 
 export const useSettingsStore = defineStore('settings', () => {
   const theme = ref<ThemeType>(getCurrentTheme());
@@ -28,6 +29,7 @@ export const useSettingsStore = defineStore('settings', () => {
     { label: '系统默认', value: 'system-ui' }
   ]);
   const showDownloadDrawer = ref(false);
+  const expired = ref(isExpired());
 
   // 系统主题监听器清理函数
   let systemThemeCleanup: (() => void) | null = null;
@@ -275,6 +277,7 @@ export const useSettingsStore = defineStore('settings', () => {
     currentArtistId,
     systemFonts,
     showDownloadDrawer,
+    expired,
     setSetData,
     toggleTheme,
     setAutoTheme,

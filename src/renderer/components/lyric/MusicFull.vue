@@ -3,11 +3,15 @@
     v-model:show="isVisible"
     height="100%"
     placement="bottom"
-    :style="drawerBaseStyle"
+    :style="{ ...drawerBaseStyle, overflow: 'hidden' }"
     :to="`#layout-main`"
     :z-index="9998"
   >
-    <!-- 背景层（用于图片模糊和明暗效果） -->
+    <!-- 模糊封面铺底层 -->
+    <div class="cover-blur-layer" :style="coverBlurStyle"></div>
+    <!-- 主色渐变遮罩层 -->
+    <div class="cover-scrim-layer" :style="coverScrimStyle"></div>
+    <!-- 自定义图片背景层（保留兼容） -->
     <div
       v-if="
         config.useCustomBackground && config.backgroundMode === 'image' && config.backgroundImage
@@ -201,6 +205,7 @@ import {
   useLyricProgress
 } from '@/hooks/MusicHook';
 import { useArtist } from '@/hooks/useArtist';
+import { useCoverBlurBackground } from '@/hooks/useCoverBlurBackground';
 import { useLyricBackground } from '@/hooks/useLyricBackground';
 import { usePlayerStore } from '@/store/modules/player';
 import { useSettingsStore } from '@/store/modules/settings';
@@ -213,6 +218,20 @@ const { t } = useI18n();
 const lrcSider = ref<any>(null);
 const isMouse = ref(false);
 const { currentBackground, applyBackground } = useLyricBackground();
+const { coverScrim, updateScrimFromPrimary } = useCoverBlurBackground();
+
+const coverUrl = computed(() => getImgUrl(playMusic.value?.picUrl, '500y500'));
+
+const coverBlurStyle = computed(() => {
+  if (!coverUrl.value) return { display: 'none' };
+  return {
+    backgroundImage: `url('${coverUrl.value}')`
+  };
+});
+
+const coverScrimStyle = computed(() => {
+  return { background: coverScrim.value };
+});
 
 // 计算自定义背景样式
 const customBackgroundStyle = computed(() => {
@@ -238,7 +257,7 @@ const customBackgroundStyle = computed(() => {
   }
 });
 
-// drawer 基础样式（非图片模式）
+// drawer 基础样式
 const drawerBaseStyle = computed(() => {
   // 图片模式时不设置背景，使用单独的背景层
   if (config.value.useCustomBackground && config.value.backgroundMode === 'image') {
@@ -248,7 +267,8 @@ const drawerBaseStyle = computed(() => {
   if (config.value.useCustomBackground && customBackgroundStyle.value) {
     return { background: customBackgroundStyle.value };
   }
-  return { background: currentBackground.value || props.background };
+  // 使用模糊封面背景时，drawer 底色透明让 blur 层可见
+  return { background: 'transparent' };
 });
 
 // 背景图片层样式（只在图片模式下使用）
@@ -400,6 +420,24 @@ watch(
     }
   },
   { immediate: true }
+);
+
+watch(
+  () => playMusic.value?.primaryColor,
+  (color) => {
+    updateScrimFromPrimary(color, config.value.theme === 'light' ? 'light' : 'dark');
+  },
+  { immediate: true }
+);
+
+watch(
+  () => config.value.theme,
+  (theme) => {
+    updateScrimFromPrimary(
+      playMusic.value?.primaryColor,
+      theme === 'light' ? 'light' : 'dark'
+    );
+  }
 );
 
 const { getLrcStyle: originalLrcStyle } = useLyricProgress();
@@ -683,6 +721,29 @@ defineExpose({
   background-position: center;
   background-repeat: no-repeat;
   z-index: 0;
+}
+
+.cover-blur-layer {
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  bottom: -60px;
+  left: -60px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(50px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.cover-scrim-layer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .drawer-back {

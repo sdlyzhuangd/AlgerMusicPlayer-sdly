@@ -20,6 +20,7 @@ import { SongSourceConfigManager } from '@/services/SongSourceConfigManager';
 import type { Platform, SongResult } from '@/types/music';
 import { getImgUrl } from '@/utils';
 import { getImageLinearBackground } from '@/utils/linearColor';
+import { isExpired } from '@/utils/expiryCheck';
 
 const { message } = createDiscreteApi(['message']);
 
@@ -232,6 +233,7 @@ export const playTrack = async (
   music: SongResult,
   shouldPlay: boolean = true
 ): Promise<boolean> => {
+  if (isExpired()) return false;
   // 1. 递增 generation，创建 requestId
   const gen = ++generation;
   const requestId = playbackRequestManager.createRequest(music);

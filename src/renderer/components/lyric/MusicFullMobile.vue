@@ -3,10 +3,14 @@
     v-model:show="isVisible"
     height="100%"
     placement="bottom"
-    :style="{ background: playerStore.playMusic.primaryColor || background }"
+    :style="{ background: 'transparent', overflow: 'hidden' }"
     :to="`#layout-main`"
     :z-index="9998"
   >
+    <!-- 模糊封面铺底层 -->
+    <div class="cover-blur-layer" :style="coverBlurStyle"></div>
+    <!-- 主色渐变遮罩层 -->
+    <div class="cover-scrim-layer" :style="coverScrimStyle"></div>
     <div
       id="mobile-drawer-target"
       :class="[
@@ -408,6 +412,7 @@ import {
   useLyricProgress
 } from '@/hooks/MusicHook';
 import { useArtist } from '@/hooks/useArtist';
+import { useCoverBlurBackground } from '@/hooks/useCoverBlurBackground';
 import { useLyricBackground } from '@/hooks/useLyricBackground';
 import { usePlayMode } from '@/hooks/usePlayMode';
 import { audioService } from '@/services/audioService';
@@ -883,6 +888,32 @@ const handleThumbTouchEnd = (e: TouchEvent) => {
 const { isDark, applyBackground } = useLyricBackground({
   writeBgColor: () => playerStore.playMusic.primaryColor || undefined
 });
+const { coverScrim, updateScrimFromPrimary } = useCoverBlurBackground();
+
+const coverUrl = computed(() => getImgUrl(playMusic.value?.picUrl, '500y500'));
+
+const coverBlurStyle = computed(() => {
+  if (!coverUrl.value) return { display: 'none' };
+  return {
+    backgroundImage: `url('${coverUrl.value}')`
+  };
+});
+
+const coverScrimStyle = computed(() => {
+  return { background: coverScrim.value };
+});
+
+watch(
+  () => playMusic.value?.primaryColor,
+  (color) => {
+    updateScrimFromPrimary(color, isDark.value ? 'dark' : 'light');
+  },
+  { immediate: true }
+);
+
+watch(isDark, (dark) => {
+  updateScrimFromPrimary(playMusic.value?.primaryColor, dark ? 'dark' : 'light');
+});
 const config = ref<LyricConfig>({ ...DEFAULT_LYRIC_CONFIG });
 
 // 可见歌词计算
@@ -1175,6 +1206,29 @@ const getWordStyle = (lineIndex: number, _wordIndex: number, word: any) => {
 </script>
 
 <style scoped lang="scss">
+.cover-blur-layer {
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  bottom: -60px;
+  left: -60px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(50px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.cover-scrim-layer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 #mobile-drawer-target {
   @apply top-0 left-0 absolute overflow-hidden flex flex-col w-full h-full;
   animation-duration: 300ms;
